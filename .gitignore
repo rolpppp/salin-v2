@@ -47,3 +47,5 @@ app.*.map.json
 # Personal docs
 docs
 mockups
+AGENTS.md
+GEMINI.md
