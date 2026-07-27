@@ -3,6 +3,7 @@ import '../entities/recurring_instance.dart';
 
 abstract class RecurringRepository {
   Future<void> createRule(RecurringRule rule);
+  Future<void> updateRule(RecurringRule rule);
   Future<void> deleteRule(String ruleId);
   Future<void> markAsPaid(String instanceId, String accountId, DateTime paidDate);
   Future<void> skipOccurrence(String instanceId);

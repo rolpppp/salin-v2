@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Split;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_state.dart';
@@ -25,6 +26,13 @@ class SplitsDebtsPage extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddActionSheet(context, ref, contacts),
+          shape: const CircleBorder(),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          child: const Icon(Icons.add, size: 28),
+        ),
         appBar: AppBar(
           title: const Text('Shared Finances'),
           bottom: const TabBar(
@@ -87,60 +95,60 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 2),
-                                    const Text(
+                                    Text(
                                       'Shared Group Split',
                                       style: TextStyle(
                                         fontFamily: 'PublicSans',
                                         fontSize: 12,
-                                        color: Colors.grey,
+                                        color: AppTheme.carbonText.withOpacity(0.5),
                                       ),
                                     ),
                                   ],
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Text(
-                                    'Split',
-                                    style: TextStyle(
-                                      fontFamily: 'PublicSans',
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.registerGreen.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'REMAINING',
+                                    child: const Text(
+                                      'Split',
                                       style: TextStyle(
                                         fontFamily: 'PublicSans',
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.grey,
-                                        letterSpacing: 1.1,
+                                        color: AppTheme.registerGreen,
                                       ),
                                     ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'REMAINING',
+                                        style: TextStyle(
+                                          fontFamily: 'PublicSans',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.carbonText.withOpacity(0.5),
+                                          letterSpacing: 1.1,
+                                        ),
+                                      ),
                                     const SizedBox(height: 2),
                                     balanceAsync.when(
                                       data: (balance) => MoneyText(
                                         amountMinor: balance,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'IBMPlexMono',
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xFF3F7D58),
+                                          color: AppTheme.registerGreen,
                                         ),
                                       ),
                                       loading: () => const SizedBox(),
@@ -151,23 +159,23 @@ class SplitsDebtsPage extends ConsumerWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'ORIGINAL',
                                       style: TextStyle(
                                         fontFamily: 'PublicSans',
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.grey,
+                                        color: AppTheme.carbonText.withOpacity(0.5),
                                         letterSpacing: 1.1,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '₱${(split.totalMinor / 100).toStringAsFixed(2)}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'IBMPlexMono',
                                         fontSize: 15,
-                                        color: Colors.grey,
+                                        color: AppTheme.carbonText.withOpacity(0.5),
                                       ),
                                     ),
                                   ],
@@ -185,8 +193,8 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       borderRadius: BorderRadius.circular(4),
                                       child: LinearProgressIndicator(
                                         value: pct,
-                                        backgroundColor: Colors.grey.withOpacity(0.1),
-                                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF3F7D58)),
+                                        backgroundColor: AppTheme.carbonText.withOpacity(0.08),
+                                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.registerGreen),
                                         minHeight: 6,
                                       ),
                                     ),
@@ -196,11 +204,11 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       children: [
                                         Text(
                                           'Paid: ₱${(paid / 100).toStringAsFixed(2)}',
-                                          style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: Colors.grey),
+                                          style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
                                         ),
                                         Text(
                                           '${(pct * 100).round()}% Settled',
-                                          style: const TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: Colors.grey),
+                                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
                                         ),
                                       ],
                                     ),
@@ -214,8 +222,13 @@ class SplitsDebtsPage extends ConsumerWidget {
                             const Divider(),
                             const SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: AppTheme.inkRed, size: 20),
+                                  tooltip: 'Delete Split',
+                                  onPressed: () => _confirmDeleteSplit(context, ref, split),
+                                ),
                                 TextButton(
                                   onPressed: () => _recordSplitRepayment(context, ref, split, contacts),
                                   style: TextButton.styleFrom(
@@ -302,10 +315,10 @@ class SplitsDebtsPage extends ConsumerWidget {
                                         padding: const EdgeInsets.only(top: 2.0),
                                         child: Text(
                                           debt.note!,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontFamily: 'PublicSans',
                                             fontSize: 12,
-                                            color: Colors.grey,
+                                            color: AppTheme.carbonText.withOpacity(0.5),
                                           ),
                                         ),
                                       ),
@@ -336,13 +349,13 @@ class SplitsDebtsPage extends ConsumerWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'REMAINING',
                                       style: TextStyle(
                                         fontFamily: 'PublicSans',
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.grey,
+                                        color: AppTheme.carbonText.withOpacity(0.5),
                                         letterSpacing: 1.1,
                                       ),
                                     ),
@@ -365,23 +378,23 @@ class SplitsDebtsPage extends ConsumerWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'ORIGINAL',
                                       style: TextStyle(
                                         fontFamily: 'PublicSans',
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.grey,
+                                        color: AppTheme.carbonText.withOpacity(0.5),
                                         letterSpacing: 1.1,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '₱${(debt.principalMinor / 100).toStringAsFixed(2)}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'IBMPlexMono',
                                         fontSize: 15,
-                                        color: Colors.grey,
+                                        color: AppTheme.carbonText.withOpacity(0.5),
                                       ),
                                     ),
                                   ],
@@ -399,7 +412,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       borderRadius: BorderRadius.circular(4),
                                       child: LinearProgressIndicator(
                                         value: pct,
-                                        backgroundColor: Colors.grey.withOpacity(0.1),
+                                        backgroundColor: AppTheme.carbonText.withOpacity(0.08),
                                         valueColor: AlwaysStoppedAnimation<Color>(color),
                                         minHeight: 6,
                                       ),
@@ -410,11 +423,11 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       children: [
                                         Text(
                                           'Settled: ₱${(paid / 100).toStringAsFixed(2)}',
-                                          style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: Colors.grey),
+                                          style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
                                         ),
                                         Text(
                                           '${(pct * 100).round()}% Settled',
-                                          style: const TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: Colors.grey),
+                                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
                                         ),
                                       ],
                                     ),
@@ -428,8 +441,13 @@ class SplitsDebtsPage extends ConsumerWidget {
                             const Divider(),
                             const SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: AppTheme.inkRed, size: 20),
+                                  tooltip: 'Delete Personal Loan',
+                                  onPressed: () => _confirmDeleteDebt(context, ref, debt),
+                                ),
                                 TextButton(
                                   onPressed: () => _recordDebtRepayment(context, ref, debt),
                                   style: TextButton.styleFrom(
@@ -498,7 +516,7 @@ class SplitsDebtsPage extends ConsumerWidget {
     final totalController = TextEditingController();
     final Map<String, TextEditingController> _shareControllers = {};
 
-    final accounts = ref.read(accountsListProvider).value ?? [];
+    final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
     if (accounts.isEmpty || contacts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please verify you have at least one Account and one Contact created.')),
@@ -564,9 +582,9 @@ class SplitsDebtsPage extends ConsumerWidget {
                   },
                 ),
                 const Divider(height: 24),
-                const Text(
+                Text(
                   'PARTICIPANT SHARES',
-                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
+                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.carbonText.withOpacity(0.5), letterSpacing: 1.2),
                 ),
                 const SizedBox(height: 8),
                 ...contacts.map((c) {
@@ -656,7 +674,7 @@ class SplitsDebtsPage extends ConsumerWidget {
   }
 
   void _recordSplitRepayment(BuildContext context, WidgetRef ref, Split split, List<Contact> contacts) async {
-    final accounts = ref.read(accountsListProvider).value ?? [];
+    final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
     final participants = await ref.read(splitRepositoryProvider).getParticipantsForSplit(split.id);
 
     if (accounts.isEmpty || participants.isEmpty) return;
@@ -725,6 +743,15 @@ class SplitsDebtsPage extends ConsumerWidget {
               final doubleAmt = double.tryParse(amountController.text.trim()) ?? 0.0;
               if (doubleAmt <= 0) return;
 
+              final amountMinor = (doubleAmt * 100).round();
+              final remainingMinor = await ref.read(splitRepositoryProvider).getRemainingBalance(split.id);
+              if (amountMinor > remainingMinor) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Repayment amount cannot exceed remaining balance (₱${(remainingMinor / 100).toStringAsFixed(2)}).')),
+                );
+                return;
+              }
+
               final friend = contacts.firstWhere((c) => c.id == selectedParticipantId);
 
               await ref.read(splitRepositoryProvider).recordRepayment(
@@ -749,7 +776,7 @@ class SplitsDebtsPage extends ConsumerWidget {
     final principalController = TextEditingController();
     final noteController = TextEditingController();
 
-    final accounts = ref.read(accountsListProvider).value ?? [];
+    final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
     if (accounts.isEmpty || contacts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please create an Account and a Contact first.')),
@@ -883,7 +910,7 @@ class SplitsDebtsPage extends ConsumerWidget {
   }
 
   void _recordDebtRepayment(BuildContext context, WidgetRef ref, Debt debt) async {
-    final accounts = ref.read(accountsListProvider).value ?? [];
+    final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
     if (accounts.isEmpty) return;
 
     String selectedAccountId = accounts.first.id;
@@ -932,6 +959,15 @@ class SplitsDebtsPage extends ConsumerWidget {
               final doubleAmt = double.tryParse(amountController.text.trim()) ?? 0.0;
               if (doubleAmt <= 0) return;
 
+              final amountMinor = (doubleAmt * 100).round();
+              final remainingMinor = await ref.read(debtRepositoryProvider).getRemainingBalance(debt.id);
+              if (amountMinor > remainingMinor) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Repayment amount cannot exceed remaining balance (₱${(remainingMinor / 100).toStringAsFixed(2)}).')),
+                );
+                return;
+              }
+
               await ref.read(debtRepositoryProvider).recordRepayment(
                     debt.id,
                     selectedAccountId,
@@ -943,6 +979,83 @@ class SplitsDebtsPage extends ConsumerWidget {
               if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Confirm', style: TextStyle(fontFamily: 'PublicSans')),
+          ),
+        ],
+      ),
+    );
+  }
+  void _confirmDeleteSplit(BuildContext context, WidgetRef ref, Split split) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Split', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete the shared split "${split.title}"? This will delete all participant information and recorded repayments, but historical account balance logs remain untouched.', style: const TextStyle(fontFamily: 'PublicSans')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'PublicSans')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final splitToUndo = split;
+              await ref.read(splitRepositoryProvider).deleteSplit(split.id);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Shared split "${split.title}" deleted.', style: const TextStyle(fontFamily: 'PublicSans')),
+                    action: SnackBarAction(
+                      label: 'UNDO',
+                      onPressed: () async {
+                        await ref.read(splitRepositoryProvider).restoreSplit(splitToUndo.id);
+                      },
+                    ),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.inkRed),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'PublicSans', color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteDebt(BuildContext context, WidgetRef ref, Debt debt) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Loan', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to delete this personal loan record? This will delete all repayments associated with it, but historical account balance logs remain untouched.', style: TextStyle(fontFamily: 'PublicSans')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'PublicSans')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final debtToUndo = debt;
+              await ref.read(debtRepositoryProvider).deleteDebt(debt.id);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Personal loan deleted.', style: TextStyle(fontFamily: 'PublicSans')),
+                    action: SnackBarAction(
+                      label: 'UNDO',
+                      onPressed: () async {
+                        await ref.read(debtRepositoryProvider).restoreDebt(debtToUndo.id);
+                      },
+                    ),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.inkRed),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'PublicSans', color: Colors.white)),
           ),
         ],
       ),

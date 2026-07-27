@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/database/database.dart';
-import '../../../../core/database/tables/tables.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../domain/entities/debt.dart';
 import '../../domain/repositories/debt_repository.dart';
@@ -112,6 +111,18 @@ class DebtRepositoryImpl implements DebtRepository {
       await (_db.update(_db.debts)..where((t) => t.id.equals(debtId))).write(
         DebtsCompanion(
           deletedAt: Value(nowMs),
+          syncStatus: Value(SyncStatus.pendingUpload.index),
+        ),
+      );
+    });
+  }
+
+  @override
+  Future<void> restoreDebt(String debtId) async {
+    await _db.transaction(() async {
+      await (_db.update(_db.debts)..where((t) => t.id.equals(debtId))).write(
+        DebtsCompanion(
+          deletedAt: const Value(null),
           syncStatus: Value(SyncStatus.pendingUpload.index),
         ),
       );

@@ -9,6 +9,7 @@ abstract class Budget with _$Budget {
   const factory Budget({
     required String id,
     required String name,
+    int? limitMinor,
     required BudgetPeriod period,
     required DateTime startDate,
     required DateTime endDate,
