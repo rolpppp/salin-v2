@@ -2271,6 +2271,17 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, BudgetRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _limitMinorMeta = const VerificationMeta(
+    'limitMinor',
+  );
+  @override
+  late final GeneratedColumn<int> limitMinor = GeneratedColumn<int>(
+    'limit_minor',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _periodMeta = const VerificationMeta('period');
   @override
   late final GeneratedColumn<int> period = GeneratedColumn<int>(
@@ -2364,6 +2375,7 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, BudgetRow> {
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    limitMinor,
     period,
     startDate,
     endDate,
@@ -2397,6 +2409,12 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, BudgetRow> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('limit_minor')) {
+      context.handle(
+        _limitMinorMeta,
+        limitMinor.isAcceptableOrUnknown(data['limit_minor']!, _limitMinorMeta),
+      );
     }
     if (data.containsKey('period')) {
       context.handle(
@@ -2480,6 +2498,10 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, BudgetRow> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      limitMinor: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}limit_minor'],
+      ),
       period: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}period'],
@@ -2524,6 +2546,7 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, BudgetRow> {
 class BudgetRow extends DataClass implements Insertable<BudgetRow> {
   final String id;
   final String name;
+  final int? limitMinor;
   final int period;
   final int startDate;
   final int endDate;
@@ -2535,6 +2558,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
   const BudgetRow({
     required this.id,
     required this.name,
+    this.limitMinor,
     required this.period,
     required this.startDate,
     required this.endDate,
@@ -2549,6 +2573,9 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || limitMinor != null) {
+      map['limit_minor'] = Variable<int>(limitMinor);
+    }
     map['period'] = Variable<int>(period);
     map['start_date'] = Variable<int>(startDate);
     map['end_date'] = Variable<int>(endDate);
@@ -2566,6 +2593,9 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
     return BudgetsCompanion(
       id: Value(id),
       name: Value(name),
+      limitMinor: limitMinor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(limitMinor),
       period: Value(period),
       startDate: Value(startDate),
       endDate: Value(endDate),
@@ -2587,6 +2617,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
     return BudgetRow(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      limitMinor: serializer.fromJson<int?>(json['limitMinor']),
       period: serializer.fromJson<int>(json['period']),
       startDate: serializer.fromJson<int>(json['startDate']),
       endDate: serializer.fromJson<int>(json['endDate']),
@@ -2603,6 +2634,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'limitMinor': serializer.toJson<int?>(limitMinor),
       'period': serializer.toJson<int>(period),
       'startDate': serializer.toJson<int>(startDate),
       'endDate': serializer.toJson<int>(endDate),
@@ -2617,6 +2649,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
   BudgetRow copyWith({
     String? id,
     String? name,
+    Value<int?> limitMinor = const Value.absent(),
     int? period,
     int? startDate,
     int? endDate,
@@ -2628,6 +2661,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
   }) => BudgetRow(
     id: id ?? this.id,
     name: name ?? this.name,
+    limitMinor: limitMinor.present ? limitMinor.value : this.limitMinor,
     period: period ?? this.period,
     startDate: startDate ?? this.startDate,
     endDate: endDate ?? this.endDate,
@@ -2641,6 +2675,9 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
     return BudgetRow(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      limitMinor: data.limitMinor.present
+          ? data.limitMinor.value
+          : this.limitMinor,
       period: data.period.present ? data.period.value : this.period,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
@@ -2661,6 +2698,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
     return (StringBuffer('BudgetRow(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('limitMinor: $limitMinor, ')
           ..write('period: $period, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
@@ -2677,6 +2715,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
   int get hashCode => Object.hash(
     id,
     name,
+    limitMinor,
     period,
     startDate,
     endDate,
@@ -2692,6 +2731,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
       (other is BudgetRow &&
           other.id == this.id &&
           other.name == this.name &&
+          other.limitMinor == this.limitMinor &&
           other.period == this.period &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
@@ -2705,6 +2745,7 @@ class BudgetRow extends DataClass implements Insertable<BudgetRow> {
 class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
   final Value<String> id;
   final Value<String> name;
+  final Value<int?> limitMinor;
   final Value<int> period;
   final Value<int> startDate;
   final Value<int> endDate;
@@ -2717,6 +2758,7 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
   const BudgetsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.limitMinor = const Value.absent(),
     this.period = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
@@ -2730,6 +2772,7 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
   BudgetsCompanion.insert({
     required String id,
     required String name,
+    this.limitMinor = const Value.absent(),
     required int period,
     required int startDate,
     required int endDate,
@@ -2751,6 +2794,7 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
   static Insertable<BudgetRow> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<int>? limitMinor,
     Expression<int>? period,
     Expression<int>? startDate,
     Expression<int>? endDate,
@@ -2764,6 +2808,7 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (limitMinor != null) 'limit_minor': limitMinor,
       if (period != null) 'period': period,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
@@ -2779,6 +2824,7 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
   BudgetsCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<int?>? limitMinor,
     Value<int>? period,
     Value<int>? startDate,
     Value<int>? endDate,
@@ -2792,6 +2838,7 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
     return BudgetsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      limitMinor: limitMinor ?? this.limitMinor,
       period: period ?? this.period,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -2812,6 +2859,9 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (limitMinor.present) {
+      map['limit_minor'] = Variable<int>(limitMinor.value);
     }
     if (period.present) {
       map['period'] = Variable<int>(period.value);
@@ -2848,6 +2898,7 @@ class BudgetsCompanion extends UpdateCompanion<BudgetRow> {
     return (StringBuffer('BudgetsCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('limitMinor: $limitMinor, ')
           ..write('period: $period, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
@@ -10735,6 +10786,7 @@ typedef $$BudgetsTableCreateCompanionBuilder =
     BudgetsCompanion Function({
       required String id,
       required String name,
+      Value<int?> limitMinor,
       required int period,
       required int startDate,
       required int endDate,
@@ -10749,6 +10801,7 @@ typedef $$BudgetsTableUpdateCompanionBuilder =
     BudgetsCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<int?> limitMinor,
       Value<int> period,
       Value<int> startDate,
       Value<int> endDate,
@@ -10801,6 +10854,11 @@ class $$BudgetsTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get limitMinor => $composableBuilder(
+    column: $table.limitMinor,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10889,6 +10947,11 @@ class $$BudgetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get limitMinor => $composableBuilder(
+    column: $table.limitMinor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get period => $composableBuilder(
     column: $table.period,
     builder: (column) => ColumnOrderings(column),
@@ -10944,6 +11007,11 @@ class $$BudgetsTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get limitMinor => $composableBuilder(
+    column: $table.limitMinor,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get period =>
       $composableBuilder(column: $table.period, builder: (column) => column);
@@ -11029,6 +11097,7 @@ class $$BudgetsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<int?> limitMinor = const Value.absent(),
                 Value<int> period = const Value.absent(),
                 Value<int> startDate = const Value.absent(),
                 Value<int> endDate = const Value.absent(),
@@ -11041,6 +11110,7 @@ class $$BudgetsTableTableManager
               }) => BudgetsCompanion(
                 id: id,
                 name: name,
+                limitMinor: limitMinor,
                 period: period,
                 startDate: startDate,
                 endDate: endDate,
@@ -11055,6 +11125,7 @@ class $$BudgetsTableTableManager
               ({
                 required String id,
                 required String name,
+                Value<int?> limitMinor = const Value.absent(),
                 required int period,
                 required int startDate,
                 required int endDate,
@@ -11067,6 +11138,7 @@ class $$BudgetsTableTableManager
               }) => BudgetsCompanion.insert(
                 id: id,
                 name: name,
+                limitMinor: limitMinor,
                 period: period,
                 startDate: startDate,
                 endDate: endDate,

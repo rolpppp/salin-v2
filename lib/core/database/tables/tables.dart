@@ -74,6 +74,7 @@ class Budgets extends Table {
 
   TextColumn get id => text()();
   TextColumn get name => text()();
+  IntColumn get limitMinor => integer().nullable().named('limit_minor')();
   IntColumn get period => integer()();
   IntColumn get startDate => integer().named('start_date')();
   IntColumn get endDate => integer().named('end_date')();
