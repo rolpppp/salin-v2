@@ -12,7 +12,10 @@ import '../../features/accounts/presentation/pages/accounts_page.dart';
 import '../../features/contacts/presentation/pages/contacts_page.dart';
 import '../../features/recurring/presentation/pages/recurring_page.dart';
 import '../../features/splits/presentation/pages/splits_debts_page.dart';
+import '../../features/settings/presentation/pages/categories_page.dart';
 import '../../shared/widgets/app_scaffold.dart';
+import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -47,6 +50,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/edit/:id',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: AddTransactionPage(
+                transactionId: state.pathParameters['id'],
+              ),
+            ),
+          ),
+          GoRoute(
             path: '/insights',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: InsightsPage(),
@@ -77,6 +88,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/categories',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CategoriesPage(),
+            ),
+          ),
+          GoRoute(
             path: '/recurring',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: RecurringPage(),
@@ -89,6 +106,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterPage(),
       ),
     ],
   );

@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/hero_receipt_card.dart';
 import '../../../../shared/widgets/loading_state.dart';
 import '../../../../shared/widgets/money_text.dart';
 import '../../../accounts/domain/entities/account.dart';
 import '../../../accounts/presentation/providers/account_providers.dart';
+import '../../../budgets/domain/entities/budget.dart';
 import '../../../budgets/presentation/providers/budget_providers.dart';
 import '../../../contacts/domain/entities/contact.dart';
 import '../../../contacts/presentation/providers/contact_providers.dart';
-import '../../../debts/domain/entities/debt.dart';
 import '../../../debts/presentation/providers/debt_providers.dart';
 import '../../../recurring/domain/entities/recurring_rule.dart';
-import '../../../recurring/domain/entities/recurring_instance.dart';
 import '../../../recurring/presentation/providers/recurring_providers.dart';
-import '../../../splits/domain/entities/split.dart';
 import '../../../splits/presentation/providers/split_providers.dart';
 import '../../../transactions/domain/entities/ledger_entry.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
@@ -43,11 +41,16 @@ class HomePage extends ConsumerWidget {
     final accountsAsync = ref.watch(accountsListProvider);
     final upcomingInstancesAsync = ref.watch(upcomingInstancesListProvider);
     final recurringRulesAsync = ref.watch(recurringRulesListProvider);
-    final activeDebtsAsync = ref.watch(activeDebtsListProvider);
-    final activeSplitsAsync = ref.watch(activeSplitsListProvider);
     final contacts = ref.watch(contactsListProvider).value ?? [];
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.go('/add'),
+        shape: const CircleBorder(),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add, size: 28),
+      ),
       appBar: AppBar(
         title: Row(
           children: [
@@ -67,16 +70,6 @@ class HomePage extends ConsumerWidget {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -145,6 +138,7 @@ class HomePage extends ConsumerWidget {
             ref.watch(totalBalanceProvider).when(
               data: (totalBalance) {
                 return Container(
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
@@ -220,11 +214,11 @@ class HomePage extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.red.withOpacity(0.2)),
+                  border: Border.all(color: AppTheme.inkRed.withOpacity(0.2)),
                 ),
                 child: const Text(
                   'Error calculating total balance',
-                  style: TextStyle(fontFamily: 'PublicSans', color: Colors.red),
+                  style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.inkRed),
                 ),
               ),
             ),
@@ -235,6 +229,8 @@ class HomePage extends ConsumerWidget {
               accountsAsync.value ?? [],
               recentEntriesAsync.value ?? [],
             ),
+            const SizedBox(height: 20),
+            _buildBudgetSummaryCard(context, ref, activeBudget),
             const SizedBox(height: 24),
 
             // Bento Grid: Upcoming & Owed to You
@@ -255,9 +251,9 @@ class HomePage extends ConsumerWidget {
                           data: (instances) {
                             final pending = instances.where((i) => i.status == RecurringInstanceStatus.pending).take(2).toList();
                             if (pending.isEmpty) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 8.0),
-                                child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Colors.grey)),
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5))),
                               );
                             }
                             final rules = recurringRulesAsync.value ?? [];
@@ -302,9 +298,9 @@ class HomePage extends ConsumerWidget {
                             data: (instances) {
                               final pending = instances.where((i) => i.status == RecurringInstanceStatus.pending).take(2).toList();
                               if (pending.isEmpty) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Colors.grey)),
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5))),
                                 );
                               }
                               final rules = recurringRulesAsync.value ?? [];
@@ -383,10 +379,10 @@ class HomePage extends ConsumerWidget {
                       final isExpense = entry.direction == MoneyDirection.outflow;
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: (isExpense ? Colors.red : Colors.green).withOpacity(0.1),
+                          backgroundColor: (isExpense ? AppTheme.inkRed : AppTheme.registerGreen).withOpacity(0.1),
                           child: Icon(
                             isExpense ? Icons.arrow_outward : Icons.arrow_downward,
-                            color: isExpense ? Colors.red : Colors.green,
+                            color: isExpense ? AppTheme.inkRed : AppTheme.registerGreen,
                           ),
                         ),
                         title: Text(
@@ -406,7 +402,7 @@ class HomePage extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                             fontFamily: 'IBMPlexMono',
-                            color: isExpense ? Colors.red : Colors.green,
+                            color: isExpense ? AppTheme.inkRed : AppTheme.registerGreen,
                           ),
                         ),
                       );
@@ -499,13 +495,273 @@ class HomePage extends ConsumerWidget {
                     fontFamily: 'IBMPlexMono',
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: balance >= 0 ? Colors.green : Colors.red,
+                    color: balance >= 0 ? AppTheme.registerGreen : AppTheme.inkRed,
                   ),
                 ),
               ],
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildBudgetSummaryCard(BuildContext context, WidgetRef ref, Budget? activeBudget) {
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    if (activeBudget == null) {
+      return InkWell(
+        onTap: () => context.go('/budgets'),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(20.0),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'ACTIVE BUDGET',
+                    style: TextStyle(
+                      fontFamily: 'PublicSans',
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: onSurfaceColor.withOpacity(0.6),
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, size: 18, color: onSurfaceColor.withOpacity(0.4)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Set up a monthly budget to track your spending capacity.',
+                style: TextStyle(
+                  fontFamily: 'PublicSans',
+                  fontSize: 14,
+                  color: onSurfaceColor.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'SET UP BUDGET',
+                style: TextStyle(
+                  fontFamily: 'PublicSans',
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final summaryAsync = ref.watch(budgetSummaryProvider(activeBudget.id));
+
+    return summaryAsync.when(
+      data: (summary) {
+        final progress = summary.totalLimitMinor > 0 ? (summary.totalSpentMinor / summary.totalLimitMinor) : 0.0;
+        final isOverspent = summary.totalSpentMinor > summary.totalLimitMinor;
+
+        Color getProgressColor(double progress, bool isOver) {
+          if (isOver) return AppTheme.inkRed;
+          if (progress > 0.8) return AppTheme.warningAmber;
+          return AppTheme.registerGreen;
+        }
+
+        final progressColor = getProgressColor(progress, isOverspent);
+
+        return InkWell(
+          onTap: () => context.go('/budgets'),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'ACTIVE BUDGET',
+                      style: TextStyle(
+                        fontFamily: 'PublicSans',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: onSurfaceColor.withOpacity(0.6),
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          activeBudget.name,
+                          style: TextStyle(
+                            fontFamily: 'PublicSans',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: onSurfaceColor.withOpacity(0.7),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.chevron_right, size: 18, color: onSurfaceColor.withOpacity(0.4)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          MoneyText(
+                            amountMinor: summary.remainingMinor.abs(),
+                            muteDecimals: true,
+                            style: TextStyle(
+                              fontFamily: 'IBMPlexMono',
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: isOverspent ? AppTheme.inkRed : AppTheme.oceanBlue,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isOverspent ? 'overspent' : 'remaining',
+                            style: TextStyle(
+                              fontFamily: 'PublicSans',
+                              fontSize: 13,
+                              color: onSurfaceColor.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${(progress * 100).toStringAsFixed(0)}% spent',
+                      style: TextStyle(
+                        fontFamily: 'PublicSans',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: progressColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    minHeight: 6,
+                    backgroundColor: onSurfaceColor.withOpacity(0.08),
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Spent: ',
+                          style: TextStyle(
+                            fontFamily: 'PublicSans',
+                            fontSize: 12,
+                            color: onSurfaceColor.withOpacity(0.5),
+                          ),
+                        ),
+                        MoneyText(
+                          amountMinor: summary.totalSpentMinor,
+                          style: TextStyle(
+                            fontFamily: 'IBMPlexMono',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: onSurfaceColor.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'Limit: ',
+                          style: TextStyle(
+                            fontFamily: 'PublicSans',
+                            fontSize: 12,
+                            color: onSurfaceColor.withOpacity(0.5),
+                          ),
+                        ),
+                        MoneyText(
+                          amountMinor: summary.totalLimitMinor,
+                          style: TextStyle(
+                            fontFamily: 'IBMPlexMono',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: onSurfaceColor.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => Container(
+        height: 110,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+            width: 1,
+          ),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (e, s) => Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.inkRed.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: const Center(
+          child: Text('Error loading budget summary', style: TextStyle(color: AppTheme.inkRed)),
+        ),
       ),
     );
   }
@@ -646,7 +902,7 @@ class _BentoListRow extends StatelessWidget {
             fontFamily: 'IBMPlexMono',
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: isPositive ? Colors.green : Theme.of(context).colorScheme.onSurface,
+            color: isPositive ? AppTheme.registerGreen : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -709,11 +965,11 @@ class _OwedToYouBentoList extends ConsumerWidget {
             }
 
             if (items.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
                   'No outstanding balances',
-                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Colors.grey),
+                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5)),
                 ),
               );
             }

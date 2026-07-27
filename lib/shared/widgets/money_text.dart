@@ -53,7 +53,10 @@ class MoneyText extends StatelessWidget {
       sign = '-';
     }
 
-    final baseStyle = (style ?? const TextStyle()).copyWith(fontFamily: 'IBMPlexMono');
+    final baseStyle = (style ?? const TextStyle()).copyWith(
+      fontFamily: 'IBMPlexMono',
+      fontFamilyFallback: const ['RobotoMono', 'monospace'],
+    );
 
     if (!muteDecimals && !strikeIntegers) {
       return Text('$sign$formatted', style: baseStyle, textAlign: TextAlign.right);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Split;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../../../shared/utils/category_icon_mapper.dart';
@@ -20,7 +21,9 @@ import '../providers/transaction_providers.dart';
 import '../widgets/quick_add_view.dart';
 
 class AddTransactionPage extends ConsumerStatefulWidget {
-  const AddTransactionPage({super.key});
+  final String? transactionId;
+
+  const AddTransactionPage({super.key, this.transactionId});
 
   @override
   ConsumerState<AddTransactionPage> createState() => _AddTransactionPageState();
@@ -63,8 +66,51 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   String? _selectedCategoryId;
   DateTime _occurredAt = DateTime.now();
 
+  bool _isSubmitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.transactionId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final entry = await ref.read(transactionRepositoryProvider).getLedgerEntryById(widget.transactionId!);
+        if (entry != null && mounted) {
+          setState(() {
+            _amountController.text = (entry.amountMinor / 100).toStringAsFixed(2);
+            _noteController.text = entry.note ?? '';
+            _selectedSourceAccountId = entry.accountId;
+            _selectedCategoryId = entry.categoryId;
+            _occurredAt = entry.occurredAt.toLocal();
+            _selectedType = entry.direction;
+            _isTransfer = entry.transferId != null;
+            if (_isTransfer) {
+              ref.read(transactionRepositoryProvider).getTransferById(entry.transferId!).then((t) {
+                if (t != null && mounted) {
+                  setState(() {
+                    if (entry.direction == MoneyDirection.outflow) {
+                      _selectedSourceAccountId = t.fromAccountId;
+                      _selectedDestAccountId = t.toAccountId;
+                    } else {
+                      _selectedSourceAccountId = t.toAccountId;
+                      _selectedDestAccountId = t.fromAccountId;
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadDraft();
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _handleDisposeDraft();
     _amountController.dispose();
     _noteController.dispose();
     _debtContactController.dispose();
@@ -72,6 +118,14 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
       row.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _handleDisposeDraft() async {
+    if (!_isSubmitted) {
+      await _saveDraft();
+    } else {
+      await _clearDraft();
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -231,7 +285,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
         return;
       }
       final entry = LedgerEntry(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.transactionId ?? DateTime.now().millisecondsSinceEpoch.toString(),
         accountId: _selectedSourceAccountId!,
         categoryId: _selectedCategoryId,
         amountMinor: amountMinor,
@@ -243,9 +297,14 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
         updatedAt: DateTime.now().toUtc(),
         syncStatus: SyncStatus.localOnly,
       );
-      await ref.read(transactionRepositoryProvider).createLedgerEntry(entry);
+      if (widget.transactionId != null) {
+        await ref.read(transactionRepositoryProvider).updateLedgerEntry(entry);
+      } else {
+        await ref.read(transactionRepositoryProvider).createLedgerEntry(entry);
+      }
     }
 
+    _isSubmitted = true;
     if (mounted) context.go('/transactions');
   }
 
@@ -332,7 +391,16 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
         backgroundColor: AppTheme.paperBg,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).maybePop()),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
+        ),
         title: const Text('New Entry'),
       ),
       body: Column(
@@ -377,7 +445,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final accountsAsync = ref.watch(accountsListProvider);
     final categoriesAsync = ref.watch(categoriesListProvider);
 
-    final accounts = accountsAsync.value ?? [];
+    final accounts = (accountsAsync.value ?? []).where((a) => !a.isArchived).toList();
     final allCategories = categoriesAsync.value ?? [];
 
     final categoryType = _selectedType == MoneyDirection.inflow ? CategoryType.income : CategoryType.expense;
@@ -728,5 +796,91 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _saveDraft() async {
+    if (widget.transactionId != null) return;
+    
+    final prefs = await SharedPreferences.getInstance();
+    final amt = _amountController.text;
+    final note = _noteController.text;
+    
+    if ((amt.isEmpty || amt == '0.00') && note.isEmpty) {
+      await _clearDraft();
+      return;
+    }
+    
+    await prefs.setString('draft_amount', amt);
+    await prefs.setString('draft_note', note);
+    await prefs.setInt('draft_type', _selectedType.index);
+    await prefs.setBool('draft_is_transfer', _isTransfer);
+    if (_selectedSourceAccountId != null) {
+      await prefs.setString('draft_source_account_id', _selectedSourceAccountId!);
+    } else {
+      await prefs.remove('draft_source_account_id');
+    }
+    if (_selectedDestAccountId != null) {
+      await prefs.setString('draft_dest_account_id', _selectedDestAccountId!);
+    } else {
+      await prefs.remove('draft_dest_account_id');
+    }
+    if (_selectedCategoryId != null) {
+      await prefs.setString('draft_category_id', _selectedCategoryId!);
+    } else {
+      await prefs.remove('draft_category_id');
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('draft_amount');
+    await prefs.remove('draft_note');
+    await prefs.remove('draft_type');
+    await prefs.remove('draft_is_transfer');
+    await prefs.remove('draft_source_account_id');
+    await prefs.remove('draft_dest_account_id');
+    await prefs.remove('draft_category_id');
+  }
+
+  Future<void> _loadDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final amt = prefs.getString('draft_amount');
+    final note = prefs.getString('draft_note');
+    if ((amt == null || amt == '0.00') && (note == null || note.isEmpty)) return;
+    
+    if (!mounted) return;
+    
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore Draft', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+        content: const Text('You have an unsaved transaction draft. Would you like to restore it?', style: TextStyle(fontFamily: 'PublicSans')),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _clearDraft();
+              Navigator.pop(context, false);
+            },
+            child: const Text('Discard', style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.inkRed)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Restore', style: TextStyle(fontFamily: 'PublicSans')),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true && mounted) {
+      setState(() {
+        _amountController.text = amt ?? '0.00';
+        _noteController.text = note ?? '';
+        _selectedType = MoneyDirection.values[prefs.getInt('draft_type') ?? 1];
+        _isTransfer = prefs.getBool('draft_is_transfer') ?? false;
+        _selectedSourceAccountId = prefs.getString('draft_source_account_id');
+        _selectedDestAccountId = prefs.getString('draft_dest_account_id');
+        _selectedCategoryId = prefs.getString('draft_category_id');
+      });
+    }
   }
 }

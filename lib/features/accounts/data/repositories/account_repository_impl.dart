@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:drift/drift.dart';
 import '../../../../core/database/database.dart';
-import '../../../../core/database/tables/tables.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/repositories/account_repository.dart';

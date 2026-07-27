@@ -26,10 +26,8 @@ final ledgerEntriesByAccountProvider = StreamProvider.family<List<LedgerEntry>, 
   return repository.watchLedgerEntriesByAccount(accountId);
 });
 
-/// Backs the Quick Add flow. No concrete AIProvider/AIAdapter is wired here
-/// yet — passing none makes AIService return its built-in "no active AI
-/// providers" result rather than throwing, so the UI can render gracefully
-/// until a real Gemini-backed AIProvider implementation is plugged in here.
+/// Backs the Quick Add flow. Wires the RuleParser and GeminiCloudProvider chain
+/// as default providers, with ParsedTransactionAdapter as the adapter.
 final aiServiceProvider = Provider<AIService>((ref) {
   return AIService();
 });

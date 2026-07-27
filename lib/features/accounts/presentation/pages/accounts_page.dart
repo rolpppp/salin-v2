@@ -54,6 +54,13 @@ class AccountsPage extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesListProvider);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showCreateAccountDialog(context, ref),
+        shape: const CircleBorder(),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add, size: 28),
+      ),
       appBar: AppBar(
         title: const Text('Net Worth'),
         actions: [
@@ -126,58 +133,59 @@ class AccountsPage extends ConsumerWidget {
                     final account = sorted[index];
                     final isMain = account.id == mainAccountId;
                     final balanceAsync = ref.watch(accountBalanceProvider(account.id));
-
-                    return Container(
-                      width: 150,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isMain ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.08),
-                          width: isMain ? 1.5 : 1,
+                    return GestureDetector(
+                      onTap: () => _showAccountOptions(context, ref, account),
+                      child: Container(
+                        width: 150,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isMain ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.08),
+                            width: isMain ? 1.5 : 1,
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Icon(_getAccountIcon(account.accountType), size: 20, color: AppTheme.oceanBlue),
-                              if (isMain)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.oceanBlue.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Icon(_getAccountIcon(account.accountType), size: 20, color: AppTheme.oceanBlue),
+                                if (isMain)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.oceanBlue.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'MAIN',
+                                      style: TextStyle(fontFamily: 'PublicSans', fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.oceanBlue),
+                                    ),
                                   ),
-                                  child: const Text(
-                                    'MAIN',
-                                    style: TextStyle(fontFamily: 'PublicSans', fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.oceanBlue),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Text(
-                            account.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'PublicSans', fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.carbonText),
-                          ),
-                          const SizedBox(height: 2),
-                          balanceAsync.when(
-                            data: (balance) => MoneyText(
-                              amountMinor: balance,
-                              muteDecimals: true,
-                              strikeIntegers: true,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.carbonText),
+                              ],
                             ),
-                            loading: () => const SizedBox(height: 18),
-                            error: (err, stack) => const Text('—'),
-                          ),
-                        ],
+                            const Spacer(),
+                            Text(
+                              account.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'PublicSans', fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.carbonText),
+                            ),
+                            const SizedBox(height: 2),
+                            balanceAsync.when(
+                              data: (balance) => MoneyText(
+                                amountMinor: balance,
+                                muteDecimals: true,
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.carbonText),
+                              ),
+                              loading: () => const SizedBox(height: 18),
+                              error: (err, stack) => const Text('—'),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -261,6 +269,7 @@ class AccountsPage extends ConsumerWidget {
                               ),
                             );
                           }),
+
                         ],
                       ),
                     );
@@ -275,6 +284,183 @@ class AccountsPage extends ConsumerWidget {
         loading: () => const LoadingState(),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
+    );
+  }
+
+  void _showAccountOptions(BuildContext context, WidgetRef ref, Account account) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  account.name,
+                  style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined, color: AppTheme.oceanBlue),
+                title: const Text('Edit Account', style: TextStyle(fontFamily: 'PublicSans')),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showEditAccountDialog(context, ref, account);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: AppTheme.inkRed),
+                title: const Text('Delete Account', style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.inkRed)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteAccount(context, ref, account);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteAccount(BuildContext context, WidgetRef ref, Account account) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete the account "${account.name}"? This will delete all its ledger records and cannot be undone.', style: const TextStyle(fontFamily: 'PublicSans')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'PublicSans')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final accountToUndo = account;
+              await ref.read(accountRepositoryProvider).delete(account.id);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Account "${account.name}" deleted.', style: const TextStyle(fontFamily: 'PublicSans')),
+                    action: SnackBarAction(
+                      label: 'UNDO',
+                      onPressed: () async {
+                        await ref.read(accountRepositoryProvider).update(
+                          accountToUndo.copyWith(deletedAt: null),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.inkRed),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'PublicSans', color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditAccountDialog(BuildContext context, WidgetRef ref, Account account) {
+    final nameController = TextEditingController(text: account.name);
+    AccountType selectedType = account.accountType;
+    final balanceController = TextEditingController(text: (account.openingBalanceMinor / 100).toStringAsFixed(2));
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Account', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Account Name'),
+                      style: const TextStyle(fontFamily: 'PublicSans'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<AccountType>(
+                      initialValue: selectedType,
+                      decoration: const InputDecoration(labelText: 'Account Type'),
+                      items: AccountType.values.map((type) {
+                        return DropdownMenuItem(
+                          value: type,
+                          child: Text(type.name.toUpperCase(), style: const TextStyle(fontFamily: 'PublicSans')),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => selectedType = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: balanceController,
+                      decoration: const InputDecoration(labelText: 'Initial Balance (₱)', hintText: '0.00'),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(fontFamily: 'IBMPlexMono'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(fontFamily: 'PublicSans')),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) return;
+
+                    final accounts = ref.read(accountsListProvider).value ?? [];
+                    final nameExists = accounts.any((a) => a.id != account.id && a.name.trim().toLowerCase() == name.toLowerCase());
+                    if (nameExists) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Account name must be unique.')),
+                      );
+                      return;
+                    }
+
+                    final balanceDouble = double.tryParse(balanceController.text) ?? 0.0;
+                    if (balanceDouble < 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Initial balance cannot be negative.')),
+                      );
+                      return;
+                    }
+
+                    final balanceMinor = (balanceDouble * 100).round();
+
+                    final updatedAccount = account.copyWith(
+                      name: name,
+                      accountType: selectedType,
+                      openingBalanceMinor: balanceMinor,
+                      updatedAt: DateTime.now().toUtc(),
+                      syncStatus: SyncStatus.localOnly,
+                    );
+
+                    await ref.read(accountRepositoryProvider).update(updatedAccount);
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('Save', style: TextStyle(fontFamily: 'PublicSans')),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -333,7 +519,23 @@ class AccountsPage extends ConsumerWidget {
                     final name = nameController.text.trim();
                     if (name.isEmpty) return;
 
+                    final accounts = ref.read(accountsListProvider).value ?? [];
+                    final nameExists = accounts.any((a) => a.name.trim().toLowerCase() == name.toLowerCase());
+                    if (nameExists) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Account name must be unique.')),
+                      );
+                      return;
+                    }
+
                     final balanceDouble = double.tryParse(balanceController.text) ?? 0.0;
+                    if (balanceDouble < 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Initial balance cannot be negative.')),
+                      );
+                      return;
+                    }
+
                     final balanceMinor = (balanceDouble * 100).round();
 
                     final newAccount = Account(
