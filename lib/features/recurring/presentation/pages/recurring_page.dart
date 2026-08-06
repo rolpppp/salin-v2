@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_state.dart';
@@ -21,6 +22,13 @@ class RecurringPage extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddRuleDialog(context, ref),
+          shape: const CircleBorder(),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          child: const Icon(Icons.add, size: 28),
+        ),
         appBar: AppBar(
           title: const Text('Recurring'),
           bottom: const TabBar(
@@ -58,9 +66,13 @@ class RecurringPage extends ConsumerWidget {
                   totalUpcomingMinor += r.amountMinor;
                 }
 
-                // Find next deduction date
-                final earliest = pending.isNotEmpty ? pending.first.scheduledDate : null;
-                final nextDeductionText = earliest != null ? _formatMonthDay(earliest) : 'NONE';
+                // Find next deduction / income date
+                final earliest = pending.isNotEmpty ? pending.first : null;
+                final nextRule = earliest != null 
+                    ? rules.firstWhere((r) => r.id == earliest.recurringRuleId, orElse: () => _dummyRule(earliest.recurringRuleId))
+                    : null;
+                final isNextIncome = nextRule?.direction == MoneyDirection.inflow;
+                final nextDeductionText = earliest != null ? _formatMonthDay(earliest.scheduledDate) : 'NONE';
 
                 // Categorize instances
                 final now = DateTime.now();
@@ -98,13 +110,13 @@ class RecurringPage extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'TOTAL UPCOMING',
                                   style: TextStyle(
                                     fontFamily: 'PublicSans',
                                     fontWeight: FontWeight.bold,
                                     fontSize: 10,
-                                    color: Colors.grey,
+                                    color: AppTheme.carbonText.withOpacity(0.5),
                                     letterSpacing: 1.1,
                                   ),
                                 ),
@@ -133,13 +145,13 @@ class RecurringPage extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'NEXT DEDUCTION',
+                                Text(
+                                  isNextIncome ? 'NEXT INCOME' : 'NEXT DEDUCTION',
                                   style: TextStyle(
                                     fontFamily: 'PublicSans',
                                     fontWeight: FontWeight.bold,
                                     fontSize: 10,
-                                    color: Colors.grey,
+                                    color: AppTheme.carbonText.withOpacity(0.5),
                                     letterSpacing: 1.1,
                                   ),
                                 ),
@@ -176,8 +188,8 @@ class RecurringPage extends ConsumerWidget {
 
                     // Upcoming Section
                     if (upcoming.isNotEmpty) ...[
-                      _buildSectionHeader('UPCOMING', Colors.grey),
-                      ...upcoming.map((inst) => _buildCommitmentTile(context, ref, inst, rules, Colors.grey)),
+                      _buildSectionHeader('UPCOMING', AppTheme.carbonText.withOpacity(0.5)),
+                      ...upcoming.map((inst) => _buildCommitmentTile(context, ref, inst, rules, AppTheme.carbonText.withOpacity(0.5))),
                       const SizedBox(height: 24),
                     ],
                   ],
@@ -203,25 +215,77 @@ class RecurringPage extends ConsumerWidget {
                   separatorBuilder: (context, index) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final rule = rules[index];
-                    return ListTile(
-                      title: Text(rule.title, style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        'Every ${rule.interval} ${rule.frequency.name}(s) • Starting ${rule.startDate.toLocal().toString().substring(0, 10)}',
-                        style: const TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Colors.grey),
+                    return Dismissible(
+                      key: Key(rule.id),
+                      background: Container(
+                        color: AppTheme.warningAmber.withOpacity(0.15),
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.edit_outlined, color: AppTheme.warningAmber),
+                            SizedBox(width: 8),
+                            Text('Edit', style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.warningAmber, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
                       ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          MoneyText(
-                            amountMinor: rule.amountMinor,
-                            style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                            onPressed: () => ref.read(recurringRepositoryProvider).deleteRule(rule.id),
-                          ),
-                        ],
+                      secondaryBackground: Container(
+                        color: AppTheme.inkRed.withOpacity(0.15),
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text('Delete', style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.inkRed, fontWeight: FontWeight.bold)),
+                            SizedBox(width: 8),
+                            Icon(Icons.delete_outline, color: AppTheme.inkRed),
+                          ],
+                        ),
+                      ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          _showAddRuleDialog(context, ref, existingRule: rule);
+                          return false;
+                        } else {
+                          bool deleteConfirmed = false;
+                          await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Schedule', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+                              content: const Text('Are you sure you want to delete this recurring schedule? Upcoming unpaid commitments will be cancelled.', style: TextStyle(fontFamily: 'PublicSans')),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel', style: TextStyle(fontFamily: 'PublicSans')),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.inkRed),
+                                  onPressed: () {
+                                    deleteConfirmed = true;
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text('Delete', style: TextStyle(fontFamily: 'PublicSans', color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (deleteConfirmed) {
+                            await ref.read(recurringRepositoryProvider).deleteRule(rule.id);
+                            return true;
+                          }
+                          return false;
+                        }
+                      },
+                      child: ListTile(
+                        title: Text(rule.title, style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          'Every ${rule.interval} ${rule.frequency.name}(s) • Starting ${rule.startDate.toLocal().toString().substring(0, 10)}',
+                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5)),
+                        ),
+                        trailing: MoneyText(
+                          amountMinor: rule.amountMinor,
+                          style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     );
                   },
@@ -303,7 +367,7 @@ class RecurringPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Due ${_formatMonthDay(inst.scheduledDate)}',
+                  '${rule.direction == MoneyDirection.inflow ? 'Expected' : 'Due'} ${_formatMonthDay(inst.scheduledDate)}',
                   style: TextStyle(
                     fontFamily: 'IBMPlexMono',
                     fontSize: 11,
@@ -332,7 +396,7 @@ class RecurringPage extends ConsumerWidget {
                   GestureDetector(
                     onTap: () => _markPaidFlow(context, ref, inst, rule),
                     child: Text(
-                      'MARK PAID',
+                      '${rule.direction == MoneyDirection.inflow ? 'RECEIVED' : 'PAID'}',
                       style: TextStyle(
                         fontFamily: 'PublicSans',
                         fontSize: 11,
@@ -345,13 +409,13 @@ class RecurringPage extends ConsumerWidget {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => ref.read(recurringRepositoryProvider).skipOccurrence(inst.id),
-                    child: const Text(
+                    child: Text(
                       'SKIP',
                       style: TextStyle(
                         fontFamily: 'PublicSans',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                        color: AppTheme.carbonText.withOpacity(0.5),
                         letterSpacing: 1.1,
                       ),
                     ),
@@ -408,7 +472,7 @@ class RecurringPage extends ConsumerWidget {
   }
 
   void _markPaidFlow(BuildContext context, WidgetRef ref, RecurringInstance inst, RecurringRule rule) async {
-    final accounts = ref.read(accountsListProvider).value ?? [];
+    final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
     if (accounts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please create an account first.')),
@@ -434,7 +498,7 @@ class RecurringPage extends ConsumerWidget {
               Center(
                 child: MoneyText(
                   amountMinor: rule.amountMinor,
-                  style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red),
+                  style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.inkRed),
                 ),
               ),
               const SizedBox(height: 16),
@@ -465,7 +529,8 @@ class RecurringPage extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              await ref.read(recurringRepositoryProvider).markAsPaid(inst.id, selectedAccountId, DateTime.now());
+              final repo = ref.read(recurringRepositoryProvider);
+              await repo.markAsPaid(inst.id, selectedAccountId, DateTime.now());
               if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Confirm', style: TextStyle(fontFamily: 'PublicSans')),
@@ -475,13 +540,15 @@ class RecurringPage extends ConsumerWidget {
     );
   }
 
-  void _showAddRuleDialog(BuildContext context, WidgetRef ref) {
-    final titleController = TextEditingController();
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-    final intervalController = TextEditingController(text: '1');
+  void _showAddRuleDialog(BuildContext context, WidgetRef ref, {RecurringRule? existingRule}) {
+    final titleController = TextEditingController(text: existingRule?.title);
+    final amountController = TextEditingController(
+      text: existingRule != null ? (existingRule.amountMinor / 100).toStringAsFixed(2) : '',
+    );
+    final noteController = TextEditingController(text: existingRule?.note ?? '');
+    final intervalController = TextEditingController(text: existingRule?.interval.toString() ?? '1');
 
-    final accounts = ref.read(accountsListProvider).value ?? [];
+    final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
     final categories = ref.read(categoriesListProvider).value ?? [];
 
     if (accounts.isEmpty) {
@@ -491,9 +558,15 @@ class RecurringPage extends ConsumerWidget {
       return;
     }
 
-    String selectedAccountId = accounts.first.id;
-    String? selectedCategoryId = categories.isNotEmpty ? categories.first.id : null;
-    RecurringFrequency frequency = RecurringFrequency.monthly;
+    String selectedAccountId = existingRule?.accountId ?? accounts.first.id;
+    if (!accounts.any((a) => a.id == selectedAccountId)) {
+      selectedAccountId = accounts.first.id;
+    }
+    String? selectedCategoryId = existingRule?.categoryId;
+    RecurringFrequency frequency = existingRule?.frequency ?? RecurringFrequency.monthly;
+    DateTime? selectedEndDate = existingRule?.endDate;
+    bool isIncome = existingRule?.direction == MoneyDirection.inflow;
+    DateTime selectedStartDate = existingRule?.startDate ?? DateTime.now();
 
     showModalBottomSheet(
       context: context,
@@ -501,141 +574,261 @@ class RecurringPage extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Add Recurring Schedule',
-                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 18, fontWeight: FontWeight.bold),
+      builder: (context) => Consumer(
+        builder: (context, ref, child) => StatefulBuilder(
+          builder: (context, setState) {
+            String getExplanation() {
+              final freqName = frequency.name.toLowerCase();
+              final intervalVal = int.tryParse(intervalController.text.trim()) ?? 1;
+              String repStr = '';
+              if (intervalVal == 1) {
+                if (frequency == RecurringFrequency.monthly) repStr = 'monthly';
+                else if (frequency == RecurringFrequency.weekly) repStr = 'weekly';
+                else if (frequency == RecurringFrequency.daily) repStr = 'daily';
+                else if (frequency == RecurringFrequency.yearly) repStr = 'yearly';
+                else repStr = 'every ${frequency.name}';
+              } else {
+                repStr = 'every $intervalVal ${freqName}s';
+              }
+              final startStr = selectedStartDate.toLocal().toString().substring(0, 10);
+              final endStr = selectedEndDate != null 
+                  ? ' until ${selectedEndDate!.toLocal().toString().substring(0, 10)}' 
+                  : ' ongoing';
+              return 'Payment will repeat $repStr starting $startStr,$endStr.';
+            }
+
+            final filteredCats = categories.where((c) => c.categoryType == (isIncome ? CategoryType.income : CategoryType.expense)).toList();
+            if (selectedCategoryId != null && !filteredCats.any((c) => c.id == selectedCategoryId)) {
+              selectedCategoryId = null;
+            }
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 20,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Title * (e.g. Netflix)'),
-                  style: const TextStyle(fontFamily: 'PublicSans'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: amountController,
-                  decoration: const InputDecoration(labelText: 'Amount (₱) *', prefixText: '₱ '),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(fontFamily: 'IBMPlexMono'),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: selectedAccountId,
-                  decoration: const InputDecoration(labelText: 'Default Account *'),
-                  items: accounts.map((acc) {
-                    return DropdownMenuItem(value: acc.id, child: Text(acc.name, style: const TextStyle(fontFamily: 'PublicSans')));
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        selectedAccountId = val;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String?>(
-                  value: selectedCategoryId,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Unassigned', style: TextStyle(fontFamily: 'PublicSans'))),
-                    ...categories.map((cat) {
-                      return DropdownMenuItem(value: cat.id, child: Text(cat.name, style: const TextStyle(fontFamily: 'PublicSans')));
-                    }),
-                  ],
-                  onChanged: (val) {
-                    setState(() {
-                      selectedCategoryId = val;
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<RecurringFrequency>(
-                        value: frequency,
-                        decoration: const InputDecoration(labelText: 'Frequency'),
-                        items: RecurringFrequency.values.map((f) {
-                          return DropdownMenuItem(value: f, child: Text(f.name.toUpperCase(), style: const TextStyle(fontFamily: 'PublicSans', fontSize: 13)));
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        existingRule != null ? 'Edit Recurring Schedule' : 'Add Recurring Schedule',
+                        style: const TextStyle(fontFamily: 'PublicSans', fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: titleController,
+                        decoration: const InputDecoration(labelText: 'Title * (e.g. Netflix)'),
+                        style: const TextStyle(fontFamily: 'PublicSans'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: amountController,
+                        decoration: const InputDecoration(labelText: 'Amount (₱) *', prefixText: '₱ '),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: const TextStyle(fontFamily: 'IBMPlexMono'),
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        title: const Text('Income (e.g. Payroll, Dividends)', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600, fontSize: 14)),
+                        contentPadding: EdgeInsets.zero,
+                        value: isIncome,
+                        onChanged: (val) {
+                          setState(() {
+                            isIncome = val;
+                            selectedCategoryId = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedAccountId,
+                        decoration: const InputDecoration(labelText: 'Default Account *'),
+                        items: accounts.map((acc) {
+                          return DropdownMenuItem(value: acc.id, child: Text(acc.name, style: const TextStyle(fontFamily: 'PublicSans')));
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) {
                             setState(() {
-                              frequency = val;
+                              selectedAccountId = val;
                             });
                           }
                         },
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: TextField(
-                        controller: intervalController,
-                        decoration: const InputDecoration(labelText: 'Interval'),
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(fontFamily: 'IBMPlexMono'),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String?>(
+                        value: selectedCategoryId,
+                        decoration: const InputDecoration(labelText: 'Category'),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('Unassigned', style: TextStyle(fontFamily: 'PublicSans'))),
+                          ...filteredCats.map((cat) {
+                            return DropdownMenuItem(value: cat.id, child: Text(cat.name, style: const TextStyle(fontFamily: 'PublicSans')));
+                          }),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            selectedCategoryId = val;
+                          });
+                        },
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: DropdownButtonFormField<RecurringFrequency>(
+                              value: frequency,
+                              decoration: const InputDecoration(labelText: 'Frequency'),
+                              items: RecurringFrequency.values.map((f) {
+                                return DropdownMenuItem(value: f, child: Text(f.name.toUpperCase(), style: const TextStyle(fontFamily: 'PublicSans', fontSize: 13)));
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    frequency = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 1,
+                            child: TextField(
+                              controller: intervalController,
+                              decoration: const InputDecoration(labelText: 'Interval'),
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(fontFamily: 'IBMPlexMono'),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        getExplanation(),
+                        style: TextStyle(
+                          fontFamily: 'PublicSans',
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Start Date *', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600, fontSize: 14)),
+                        subtitle: Text(selectedStartDate.toLocal().toString().substring(0, 10), style: const TextStyle(fontFamily: 'IBMPlexMono')),
+                        trailing: const Icon(Icons.calendar_today, size: 20),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedStartDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              selectedStartDate = picked.toUtc();
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 4),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('End Date (Optional)', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600, fontSize: 14)),
+                        subtitle: Text(selectedEndDate != null ? selectedEndDate!.toLocal().toString().substring(0, 10) : 'Ongoing (No End Date)', style: const TextStyle(fontFamily: 'IBMPlexMono')),
+                        trailing: selectedEndDate != null 
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20),
+                                onPressed: () => setState(() => selectedEndDate = null),
+                              )
+                            : const Icon(Icons.calendar_today, size: 20),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedEndDate ?? DateTime.now().add(const Duration(days: 30)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              selectedEndDate = picked.toUtc();
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: noteController,
+                        decoration: const InputDecoration(labelText: 'Note'),
+                        style: const TextStyle(fontFamily: 'PublicSans'),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final title = titleController.text.trim();
+                          if (title.isEmpty) return;
+
+                          final amountDouble = double.tryParse(amountController.text.trim()) ?? 0.0;
+                          if (amountDouble <= 0) return;
+
+                          final interval = int.tryParse(intervalController.text.trim()) ?? 1;
+                          final repo = ref.read(recurringRepositoryProvider);
+
+                          if (existingRule != null) {
+                            final rule = existingRule.copyWith(
+                              title: title,
+                              accountId: selectedAccountId,
+                              categoryId: selectedCategoryId,
+                              amountMinor: (amountDouble * 100).round(),
+                              direction: isIncome ? MoneyDirection.inflow : MoneyDirection.outflow,
+                              frequency: frequency,
+                              interval: interval,
+                              startDate: selectedStartDate,
+                              endDate: selectedEndDate,
+                              note: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
+                              updatedAt: DateTime.now().toUtc(),
+                            );
+                            await repo.updateRule(rule);
+                          } else {
+                            final rule = RecurringRule(
+                              id: DateTime.now().millisecondsSinceEpoch.toString(),
+                              title: title,
+                              accountId: selectedAccountId,
+                              categoryId: selectedCategoryId,
+                              amountMinor: (amountDouble * 100).round(),
+                              direction: isIncome ? MoneyDirection.inflow : MoneyDirection.outflow,
+                              frequency: frequency,
+                              interval: interval,
+                              startDate: selectedStartDate,
+                              endDate: selectedEndDate,
+                              autoGenerate: true,
+                              note: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
+                              createdAt: DateTime.now().toUtc(),
+                              updatedAt: DateTime.now().toUtc(),
+                              syncStatus: SyncStatus.localOnly,
+                            );
+                            await repo.createRule(rule);
+                          }
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                        child: const Text('Save Schedule', style: TextStyle(fontFamily: 'PublicSans')),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  decoration: const InputDecoration(labelText: 'Note'),
-                  style: const TextStyle(fontFamily: 'PublicSans'),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () async {
-                    final title = titleController.text.trim();
-                    if (title.isEmpty) return;
-
-                    final amountDouble = double.tryParse(amountController.text.trim()) ?? 0.0;
-                    if (amountDouble <= 0) return;
-
-                    final interval = int.tryParse(intervalController.text.trim()) ?? 1;
-
-                    final rule = RecurringRule(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      title: title,
-                      accountId: selectedAccountId,
-                      categoryId: selectedCategoryId,
-                      amountMinor: (amountDouble * 100).round(),
-                      direction: MoneyDirection.outflow,
-                      frequency: frequency,
-                      interval: interval,
-                      startDate: DateTime.now().toUtc(),
-                      autoGenerate: true,
-                      note: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
-                      createdAt: DateTime.now().toUtc(),
-                      updatedAt: DateTime.now().toUtc(),
-                      syncStatus: SyncStatus.localOnly,
-                    );
-
-                    await ref.read(recurringRepositoryProvider).createRule(rule);
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: const Text('Save Schedule', style: TextStyle(fontFamily: 'PublicSans')),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

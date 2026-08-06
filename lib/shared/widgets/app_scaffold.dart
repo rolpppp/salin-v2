@@ -41,20 +41,8 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String location = GoRouterState.of(context).uri.path;
-    final bool showAddFab = !location.startsWith('/add');
-
     return Scaffold(
       body: child,
-      floatingActionButton: showAddFab
-          ? FloatingActionButton(
-              onPressed: () => GoRouter.of(context).go('/add'),
-              shape: const CircleBorder(),
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              child: const Icon(Icons.add, size: 28),
-            )
-          : null,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(
@@ -87,7 +75,7 @@ class AppScaffold extends StatelessWidget {
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long_outlined),
               activeIcon: Icon(Icons.receipt_long),
-              label: 'Ledger',
+              label: 'Transactions',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart_outlined),

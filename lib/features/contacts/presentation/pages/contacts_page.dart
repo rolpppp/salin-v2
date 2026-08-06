@@ -14,6 +14,13 @@ class ContactsPage extends ConsumerWidget {
     final contactsAsync = ref.watch(contactsListProvider);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddContactDialog(context, ref),
+        shape: const CircleBorder(),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add, size: 28),
+      ),
       appBar: AppBar(
         title: const Text('Contacts'),
         actions: [
@@ -55,9 +62,18 @@ class ContactsPage extends ConsumerWidget {
                   contact.phone ?? contact.email ?? 'No contact details',
                   style: const TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Colors.grey),
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                  onPressed: () => _confirmDelete(context, ref, contact),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.edit_outlined, color: Theme.of(context).primaryColor, size: 20),
+                      onPressed: () => _showEditContactDialog(context, ref, contact),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      onPressed: () => _confirmDelete(context, ref, contact),
+                    ),
+                  ],
                 ),
               );
             },
@@ -65,6 +81,77 @@ class ContactsPage extends ConsumerWidget {
         },
         loading: () => const LoadingState(),
         error: (err, stack) => Center(child: Text('Error: $err')),
+      ),
+    );
+  }
+
+  void _showEditContactDialog(BuildContext context, WidgetRef ref, Contact contact) {
+    final nameController = TextEditingController(text: contact.name);
+    final phoneController = TextEditingController(text: contact.phone ?? '');
+    final emailController = TextEditingController(text: contact.email ?? '');
+    final notesController = TextEditingController(text: contact.notes ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Contact', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name *'),
+                style: const TextStyle(fontFamily: 'PublicSans'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(labelText: 'Phone'),
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(fontFamily: 'PublicSans'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(fontFamily: 'PublicSans'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(labelText: 'Notes'),
+                style: const TextStyle(fontFamily: 'PublicSans'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'PublicSans')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              if (name.isEmpty) return;
+
+              final updated = contact.copyWith(
+                name: name,
+                phone: phoneController.text.trim().isNotEmpty ? phoneController.text.trim() : null,
+                email: emailController.text.trim().isNotEmpty ? emailController.text.trim() : null,
+                notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
+                updatedAt: DateTime.now().toUtc(),
+                syncStatus: SyncStatus.localOnly,
+              );
+
+              await ref.read(contactRepositoryProvider).update(updated);
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Save', style: TextStyle(fontFamily: 'PublicSans')),
+          ),
+        ],
       ),
     );
   }

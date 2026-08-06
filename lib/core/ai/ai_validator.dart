@@ -21,6 +21,10 @@ class AIValidator {
       warnings.add('Category is required for expenses.');
     }
 
+    if (transaction.notes != null && transaction.notes!.contains('needs_review')) {
+      warnings.add('Format did not match exactly: best-effort parse applied.');
+    }
+
     return warnings;
   }
 }

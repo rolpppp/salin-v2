@@ -3,5 +3,5 @@ import 'parsed_transaction.dart';
 
 abstract class AIProvider {
   String get name;
-  Future<InferenceResult<ParsedTransaction>> parseTransaction(String input);
+  Future<InferenceResult<List<ParsedTransaction>>> parseTransaction(String input);
 }

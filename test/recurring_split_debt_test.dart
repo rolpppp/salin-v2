@@ -13,7 +13,6 @@ import 'package:salin/features/debts/domain/entities/debt.dart';
 import 'package:salin/features/debts/presentation/providers/debt_providers.dart';
 import 'package:salin/features/recurring/data/repositories/recurring_repository_impl.dart';
 import 'package:salin/features/recurring/domain/entities/recurring_rule.dart';
-import 'package:salin/features/recurring/domain/entities/recurring_instance.dart';
 import 'package:salin/features/recurring/presentation/providers/recurring_providers.dart';
 import 'package:salin/features/splits/data/repositories/split_repository_impl.dart';
 import 'package:salin/features/splits/domain/entities/split.dart';
@@ -141,6 +140,74 @@ void main() {
       final allInstances = await database.select(database.recurringInstances).get();
       final paidInstance = allInstances.firstWhere((i) => i.id == firstInstanceId);
       expect(paidInstance.status, RecurringInstanceStatus.paid.index);
+    });
+
+    test('Recurring Schedule rule updates and regenerates pending instances', () async {
+      final now = DateTime.now().toUtc();
+      
+      // Setup Account
+      final account = Account(
+        id: 'acc_wallet2',
+        name: 'Wallet 2',
+        accountType: AccountType.cash,
+        openingBalanceMinor: 1000000,
+        currency: 'PHP',
+        icon: 'wallet',
+        displayOrder: 1,
+        isArchived: false,
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: SyncStatus.localOnly,
+      );
+      await accountRepository.create(account);
+
+      // Create Rule
+      final rule = RecurringRule(
+        id: 'rr_edit',
+        title: 'Original Title',
+        accountId: 'acc_wallet2',
+        categoryId: 'cat_entertainment',
+        amountMinor: 50000,
+        direction: MoneyDirection.outflow,
+        frequency: RecurringFrequency.monthly,
+        interval: 1,
+        startDate: now.subtract(const Duration(days: 1)),
+        autoGenerate: true,
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: SyncStatus.localOnly,
+      );
+
+      await recurringRepository.createRule(rule);
+
+      final initialInstances = await database.select(database.recurringInstances).get();
+      expect(initialInstances.length, 5);
+
+      // Mark first as paid
+      final firstInst = initialInstances.first;
+      await recurringRepository.markAsPaid(firstInst.id, 'acc_wallet2', now);
+
+      // Edit Rule
+      final updatedRule = rule.copyWith(
+        title: 'Updated Title',
+        amountMinor: 75000,
+        updatedAt: now,
+      );
+      await recurringRepository.updateRule(updatedRule);
+
+      // Verify rule updated in DB
+      final retrievedRule = await recurringRepository.getRuleById('rr_edit');
+      expect(retrievedRule, isNotNull);
+      expect(retrievedRule!.title, 'Updated Title');
+      expect(retrievedRule.amountMinor, 75000);
+
+      // Verify that paid instance remains paid and intact
+      final allInstancesAfterEdit = await database.select(database.recurringInstances).get();
+      final paidInstance = allInstancesAfterEdit.firstWhere((i) => i.id == firstInst.id);
+      expect(paidInstance.status, RecurringInstanceStatus.paid.index);
+
+      // Verify that total instances are now 6 (1 paid, 5 regenerated pending)
+      expect(allInstancesAfterEdit.length, 6);
     });
 
     test('Split expense creation and repayment calculations', () async {

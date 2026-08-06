@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 import '../../../../core/database/database.dart';
-import '../../../../core/database/tables/tables.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../domain/entities/ledger_entry.dart';
 import '../../domain/entities/category.dart';
@@ -137,10 +137,47 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String accountId,
     String? categoryId,
   }) async {
+    final targetCategory = categoryId ?? parsed.category;
+    String? dbCategory;
+    if (targetCategory != null) {
+      final clean = targetCategory.toLowerCase().trim().replaceAll('cat_', '');
+      switch (clean) {
+        case 'food':
+          dbCategory = 'cat_food';
+          break;
+        case 'transport':
+          dbCategory = 'cat_transport';
+          break;
+        case 'dorm':
+          dbCategory = 'cat_rent';
+          break;
+        case 'leisure':
+          dbCategory = 'cat_entertainment';
+          break;
+        case 'academics':
+          dbCategory = 'cat_utilities';
+          break;
+        case 'income':
+          dbCategory = 'cat_other_income';
+          break;
+        case 'salary':
+          dbCategory = 'cat_salary';
+          break;
+        case 'investments':
+          dbCategory = 'cat_investments';
+          break;
+        case 'uncategorized':
+          dbCategory = null;
+          break;
+        default:
+          dbCategory = 'cat_$clean';
+      }
+    }
+
     final entry = LedgerEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       accountId: accountId,
-      categoryId: categoryId ?? parsed.category,
+      categoryId: dbCategory,
       amountMinor: parsed.amountMinor ?? 0,
       direction: parsed.transactionType.toLowerCase() == 'income'
           ? MoneyDirection.inflow

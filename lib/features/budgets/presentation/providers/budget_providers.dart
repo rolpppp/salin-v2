@@ -118,48 +118,53 @@ final budgetSummaryProvider = Provider.family<AsyncValue<BudgetSummary>, String>
                            occurredMs >= startMs &&
                            occurredMs <= endMs &&
                            e.categoryId != null &&
-                           limitCategoryIds.contains(e.categoryId);
+                           (limitCategoryIds.isEmpty || limitCategoryIds.contains(e.categoryId));
                   }).toList();
 
-                  int totalLimit = 0;
+                  int totalLimit = budget.limitMinor ?? 0;
                   int totalSpent = 0;
                   final categorySummaries = <CategoryBudgetSummary>[];
 
-                  for (final limit in limits) {
-                    totalLimit += limit.limitMinor;
+                  if (limits.isNotEmpty) {
+                    totalLimit = 0;
+                    for (final limit in limits) {
+                      totalLimit += limit.limitMinor;
 
-                    // Calculate spent for this category
-                    final catSpent = qualifiedExpenses
-                        .where((e) => e.categoryId == limit.categoryId)
-                        .fold<int>(0, (sum, e) => sum + e.amountMinor);
+                      // Calculate spent for this category
+                      final catSpent = qualifiedExpenses
+                          .where((e) => e.categoryId == limit.categoryId)
+                          .fold<int>(0, (sum, e) => sum + e.amountMinor);
 
-                    totalSpent += catSpent;
+                      totalSpent += catSpent;
 
-                    // Find category details
-                    final category = categories.firstWhere(
-                      (c) => c.id == limit.categoryId,
-                      orElse: () => Category(
-                        id: limit.categoryId,
-                        name: 'Unknown',
-                        icon: 'category',
-                        color: '#808080',
-                        categoryType: CategoryType.expense,
-                        isSystem: false,
-                        displayOrder: 99,
-                        createdAt: DateTime.now(),
-                        updatedAt: DateTime.now(),
-                        syncStatus: SyncStatus.localOnly,
-                      ),
-                    );
+                      // Find category details
+                      final category = categories.firstWhere(
+                        (c) => c.id == limit.categoryId,
+                        orElse: () => Category(
+                          id: limit.categoryId,
+                          name: 'Unknown',
+                          icon: 'category',
+                          color: '#808080',
+                          categoryType: CategoryType.expense,
+                          isSystem: false,
+                          displayOrder: 99,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                          syncStatus: SyncStatus.localOnly,
+                        ),
+                      );
 
-                    categorySummaries.add(CategoryBudgetSummary(
-                      categoryId: limit.categoryId,
-                      categoryName: category.name,
-                      categoryIcon: category.icon,
-                      categoryColor: category.color,
-                      limitMinor: limit.limitMinor,
-                      spentMinor: catSpent,
-                    ));
+                      categorySummaries.add(CategoryBudgetSummary(
+                        categoryId: limit.categoryId,
+                        categoryName: category.name,
+                        categoryIcon: category.icon,
+                        categoryColor: category.color,
+                        limitMinor: limit.limitMinor,
+                        spentMinor: catSpent,
+                      ));
+                    }
+                  } else {
+                    totalSpent = qualifiedExpenses.fold<int>(0, (sum, e) => sum + e.amountMinor);
                   }
 
                   return AsyncValue.data(BudgetSummary(

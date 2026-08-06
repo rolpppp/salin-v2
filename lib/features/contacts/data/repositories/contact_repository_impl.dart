@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/database.dart';
-import '../../../../core/database/tables/tables.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../domain/entities/contact.dart';
 import '../../domain/repositories/contact_repository.dart';

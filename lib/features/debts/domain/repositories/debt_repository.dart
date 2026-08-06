@@ -9,6 +9,7 @@ abstract class DebtRepository {
   });
 
   Future<void> deleteDebt(String debtId);
+  Future<void> restoreDebt(String debtId);
 
   Future<void> recordRepayment(
     String debtId,

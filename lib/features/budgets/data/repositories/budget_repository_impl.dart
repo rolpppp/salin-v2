@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/database.dart';
-import '../../../../core/database/tables/tables.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';
@@ -16,6 +15,7 @@ class BudgetRepositoryImpl implements BudgetRepository {
     return Budget(
       id: row.id,
       name: row.name,
+      limitMinor: row.limitMinor,
       period: BudgetPeriod.values[row.period],
       startDate: DateTime.fromMillisecondsSinceEpoch(row.startDate, isUtc: true),
       endDate: DateTime.fromMillisecondsSinceEpoch(row.endDate, isUtc: true),
@@ -31,6 +31,7 @@ class BudgetRepositoryImpl implements BudgetRepository {
     return BudgetsCompanion(
       id: Value(domain.id),
       name: Value(domain.name),
+      limitMinor: Value(domain.limitMinor),
       period: Value(domain.period.index),
       startDate: Value(domain.startDate.millisecondsSinceEpoch),
       endDate: Value(domain.endDate.millisecondsSinceEpoch),

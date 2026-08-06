@@ -11,6 +11,7 @@ abstract class SplitRepository {
   });
   
   Future<void> deleteSplit(String splitId);
+  Future<void> restoreSplit(String splitId);
   
   Future<void> recordRepayment(
     String splitId,

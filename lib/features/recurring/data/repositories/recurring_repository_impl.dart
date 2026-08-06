@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/database/database.dart';
-import '../../../../core/database/tables/tables.dart';
 import '../../../../shared/enums/financial_enums.dart';
 import '../../domain/entities/recurring_rule.dart';
 import '../../domain/entities/recurring_instance.dart';
@@ -104,6 +103,20 @@ class RecurringRepositoryImpl implements RecurringRepository {
     await _db.transaction(() async {
       await _db.into(_db.recurringRules).insert(_mapRuleDomainToCompanion(rule));
       // Automatically generate initial 5 occurrences
+      await _generateNextInstancesInternal(rule, 5);
+    });
+  }
+
+  @override
+  Future<void> updateRule(RecurringRule rule) async {
+    await _db.transaction(() async {
+      await (_db.update(_db.recurringRules)..where((t) => t.id.equals(rule.id))).write(
+        _mapRuleDomainToCompanion(rule.copyWith(updatedAt: DateTime.now().toUtc())),
+      );
+      // Cancel pending instances and recreate them
+      await (_db.delete(_db.recurringInstances)
+            ..where((t) => t.recurringRuleId.equals(rule.id) & t.status.equals(RecurringInstanceStatus.pending.index)))
+          .go();
       await _generateNextInstancesInternal(rule, 5);
     });
   }

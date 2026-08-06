@@ -9,6 +9,7 @@ part of 'budget.dart';
 _Budget _$BudgetFromJson(Map<String, dynamic> json) => _Budget(
   id: json['id'] as String,
   name: json['name'] as String,
+  limitMinor: (json['limitMinor'] as num?)?.toInt(),
   period: $enumDecode(_$BudgetPeriodEnumMap, json['period']),
   startDate: DateTime.parse(json['startDate'] as String),
   endDate: DateTime.parse(json['endDate'] as String),
@@ -24,6 +25,7 @@ _Budget _$BudgetFromJson(Map<String, dynamic> json) => _Budget(
 Map<String, dynamic> _$BudgetToJson(_Budget instance) => <String, dynamic>{
   'id': instance.id,
   'name': instance.name,
+  'limitMinor': instance.limitMinor,
   'period': _$BudgetPeriodEnumMap[instance.period]!,
   'startDate': instance.startDate.toIso8601String(),
   'endDate': instance.endDate.toIso8601String(),
