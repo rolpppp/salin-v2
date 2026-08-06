@@ -1,15 +1,15 @@
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:salin/core/database/database.dart';
 import 'package:salin/core/ai/parsed_transaction.dart';
+import 'package:salin/core/database/database.dart';
+import 'package:salin/core/database/database_provider.dart';
 import 'package:salin/features/accounts/data/repositories/account_repository_impl.dart';
 import 'package:salin/features/accounts/domain/entities/account.dart';
 import 'package:salin/features/transactions/data/repositories/transaction_repository_impl.dart';
 import 'package:salin/features/transactions/presentation/providers/transaction_providers.dart';
 import 'package:salin/features/transactions/presentation/providers/transaction_review_provider.dart';
 import 'package:salin/shared/enums/financial_enums.dart';
-import 'package:salin/core/database/database_provider.dart';
 
 void main() {
   late AppDatabase database;
@@ -144,6 +144,63 @@ void main() {
       reviewNotifier.discardItem(stagedId);
 
       expect(container.read(transactionReviewProvider), isEmpty);
+    });
+
+    test('Stage and Confirm Multiple Staged Transactions', () async {
+      // 1. Setup account
+      final account = Account(
+        id: 'acc_cash',
+        name: 'Wallet',
+        accountType: AccountType.cash,
+        openingBalanceMinor: 100000, // ₱1,000.00
+        currency: 'PHP',
+        icon: 'cash',
+        displayOrder: 1,
+        isArchived: false,
+        createdAt: DateTime.now().toUtc(),
+        updatedAt: DateTime.now().toUtc(),
+        syncStatus: SyncStatus.localOnly,
+      );
+      await accountRepository.create(account);
+
+      final reviewNotifier = container.read(transactionReviewProvider.notifier);
+
+      // 2. Stage two valid transactions (no warnings)
+      final parsed1 = const ParsedTransaction(
+        description: 'Lunch Jollibee',
+        amountMinor: 15000,
+        currency: 'PHP',
+        transactionType: 'expense',
+        category: 'cat_food',
+      );
+      final parsed2 = const ParsedTransaction(
+        description: 'Grab Car',
+        amountMinor: 25000,
+        currency: 'PHP',
+        transactionType: 'expense',
+        category: 'cat_transport',
+      );
+
+      reviewNotifier.stageTransaction('Jollibee 150', parsed1);
+      reviewNotifier.stageTransaction('Grab 250', parsed2);
+
+      expect(container.read(transactionReviewProvider).length, 2);
+
+      // 3. Confirm all valid items
+      await reviewNotifier.confirmAll(accountId: 'acc_cash');
+
+      // Staging queue should be empty
+      expect(container.read(transactionReviewProvider), isEmpty);
+
+      // Both entries should exist in DB
+      final entries = await transactionRepository.getAllLedgerEntries();
+      expect(entries.length, 2);
+      expect(entries.any((e) => e.note?.contains('Jollibee') ?? false), true);
+      expect(entries.any((e) => e.note?.contains('Grab') ?? false), true);
+
+      // Balance should be: 1000.00 - 150.00 - 250.00 = 600.00 (60000 minor)
+      final balance = await accountRepository.watchBalance('acc_cash').first;
+      expect(balance, 60000);
     });
   });
 }
