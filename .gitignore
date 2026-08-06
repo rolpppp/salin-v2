@@ -49,3 +49,14 @@ docs
 mockups
 AGENTS.md
 GEMINI.md
+
+# env
+assets/salin.env
+
+.claude
+CLAUDE.md
+commit_strategy.md
+
+# builds
+android/build
+ios/build
