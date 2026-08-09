@@ -56,11 +56,16 @@ class SalinApp extends ConsumerWidget {
       loading: () => ThemeMode.light,
       error: (_, _) => ThemeMode.light,
     );
+    final accent = settingsAsync.when(
+      data: (settings) => AppTheme.resolveAccent(settings.accentTheme),
+      loading: () => AppTheme.oceanBlue,
+      error: (_, _) => AppTheme.oceanBlue,
+    );
 
     return MaterialApp.router(
       title: 'Salin',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme(accent),
+      darkTheme: AppTheme.darkTheme(accent),
       themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,

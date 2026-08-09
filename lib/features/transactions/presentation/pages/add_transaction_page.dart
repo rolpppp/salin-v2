@@ -43,10 +43,15 @@ class _SplitRowData {
 
 class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   final _formKey = GlobalKey<FormState>();
-  final _amountController = TextEditingController(text: '0.00');
+  final _amountController = TextEditingController();
   final _noteController = TextEditingController();
 
-  bool _showQuickAdd = false;
+  // Defaults to Quick Add — the natural-language flow is the one that
+  // competes with jotting expenses in a Notes app, so it should be what
+  // opens first, not a tab switch away. Editing an existing transaction
+  // (see initState) always forces Manual instead, since Quick Add is a
+  // parse-from-text flow that doesn't apply to editing a structured entry.
+  bool _showQuickAdd = true;
 
   MoneyDirection _selectedType = MoneyDirection.outflow;
   bool _isTransfer = false;
@@ -72,6 +77,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   void initState() {
     super.initState();
     if (widget.transactionId != null) {
+      _showQuickAdd = false;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final entry = await ref.read(transactionRepositoryProvider).getLedgerEntryById(widget.transactionId!);
         if (entry != null && mounted) {
@@ -104,8 +110,23 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadDraft();
+        _loadEntryModePreference();
       });
     }
+  }
+
+  Future<void> _loadEntryModePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final preferred = prefs.getBool('preferred_show_quick_add');
+    if (preferred != null && preferred != _showQuickAdd && mounted) {
+      setState(() => _showQuickAdd = preferred);
+    }
+  }
+
+  Future<void> _setEntryMode(bool showQuickAdd) async {
+    setState(() => _showQuickAdd = showQuickAdd);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('preferred_show_quick_add', showQuickAdd);
   }
 
   @override
@@ -188,9 +209,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
       // Recurring takes priority over a one-off ledger entry: the rule
       // itself is the source of truth going forward, seeded with its first
       // upcoming instance rather than also writing a duplicate manual entry.
-      if (_selectedSourceAccountId == null) return;
-      if (_selectedType == MoneyDirection.outflow && _selectedCategoryId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a category for this expense.')));
+      if (_selectedSourceAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select an account.')));
         return;
       }
       final rule = RecurringRule(
@@ -212,7 +232,10 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
       await ref.read(recurringRepositoryProvider).createRule(rule);
       await ref.read(recurringRepositoryProvider).generateNextInstances(rule.id, 1);
     } else if (_isSplit) {
-      if (_selectedSourceAccountId == null) return;
+      if (_selectedSourceAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select an account.')));
+        return;
+      }
       final splitId = DateTime.now().millisecondsSinceEpoch.toString();
       final participants = <SplitParticipant>[];
       int totalSplitMinor = 0;
@@ -257,7 +280,10 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
             occurredAt: _occurredAt.toUtc(),
           );
     } else if (_isDebt) {
-      if (_selectedSourceAccountId == null) return;
+      if (_selectedSourceAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select an account.')));
+        return;
+      }
       final friendName = _debtContactController.text.trim();
       if (friendName.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Friend name is required for loan details.')));
@@ -279,9 +305,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
       );
       await ref.read(debtRepositoryProvider).createDebt(debtObj, isLent: _selectedType == MoneyDirection.outflow, accountId: _selectedSourceAccountId!, occurredAt: _occurredAt.toUtc());
     } else {
-      if (_selectedSourceAccountId == null) return;
-      if (_selectedType == MoneyDirection.outflow && _selectedCategoryId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a category for this expense.')));
+      if (_selectedSourceAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select an account.')));
         return;
       }
       final entry = LedgerEntry(
@@ -305,6 +330,12 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     }
 
     _isSubmitted = true;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transaction saved.'), duration: Duration(milliseconds: 900)),
+      );
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
     if (mounted) context.go('/transactions');
   }
 
@@ -334,7 +365,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return ListTile(
-                    leading: Icon(iconOf(item), color: AppTheme.oceanBlue),
+                    leading: Icon(iconOf(item), color: Theme.of(context).colorScheme.primary),
                     title: Text(labelOf(item), style: const TextStyle(fontFamily: 'PublicSans')),
                     onTap: () {
                       onSelected(item);
@@ -350,34 +381,34 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     );
   }
 
-  Widget _pickerRow({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _pickerRow({required BuildContext context, required IconData icon, required String label, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6.0),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: AppTheme.carbonText.withOpacity(0.5)),
+            Icon(icon, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
             const SizedBox(width: 8),
             Expanded(child: Text(label, style: const TextStyle(fontFamily: 'PublicSans', fontSize: 15))),
-            Icon(Icons.chevron_right, size: 18, color: AppTheme.carbonText.withOpacity(0.4)),
+            Icon(Icons.chevron_right, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
           ],
         ),
       ),
     );
   }
 
-  Widget _expandableRow({required IconData icon, required String label, required bool expanded, required VoidCallback onTap}) {
+  Widget _expandableRow({required BuildContext context, required IconData icon, required String label, required bool expanded, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12.0),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppTheme.carbonText.withOpacity(0.6)),
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             const SizedBox(width: 12),
             Expanded(child: Text(label, style: const TextStyle(fontFamily: 'PublicSans', fontSize: 15))),
-            Icon(expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: AppTheme.carbonText.withOpacity(0.5)),
+            Icon(expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           ],
         ),
       ),
@@ -388,7 +419,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.paperBg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -409,12 +440,12 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
           Center(
             child: Container(
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(color: AppTheme.carbonText.withOpacity(0.06), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06), borderRadius: BorderRadius.circular(10)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _segmentButton('Manual', !_showQuickAdd, () => setState(() => _showQuickAdd = false)),
-                  _segmentButton('Quick Add', _showQuickAdd, () => setState(() => _showQuickAdd = true)),
+                  _segmentButton(context, 'Manual', !_showQuickAdd, () => _setEntryMode(false)),
+                  _segmentButton(context, 'Quick Add', _showQuickAdd, () => _setEntryMode(true)),
                 ],
               ),
             ),
@@ -426,17 +457,17 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     );
   }
 
-  Widget _segmentButton(String label, bool selected, VoidCallback onTap) {
+  Widget _segmentButton(BuildContext context, String label, bool selected, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
+          color: selected ? Theme.of(context).colorScheme.surface : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          boxShadow: selected ? [BoxShadow(color: AppTheme.carbonText.withOpacity(0.08), blurRadius: 6)] : null,
+          boxShadow: selected ? [BoxShadow(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08), blurRadius: 6)] : null,
         ),
-        child: Text(label, style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600, color: selected ? AppTheme.carbonText : AppTheme.carbonText.withOpacity(0.5))),
+        child: Text(label, style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600, color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
       ),
     );
   }
@@ -500,8 +531,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                       controller: _amountController,
                       textAlign: TextAlign.center,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 40, fontWeight: FontWeight.w700, color: AppTheme.carbonText),
-                      decoration: const InputDecoration(border: InputBorder.none, prefixText: '₱  ', prefixStyle: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 32, color: AppTheme.carbonText)),
+                      style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 40, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
+                      decoration: InputDecoration(border: InputBorder.none, prefixText: '₱  ', prefixStyle: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 32, color: Theme.of(context).colorScheme.onSurface), hintText: '0.00'),
                       validator: (val) {
                         final parsed = double.tryParse(val ?? '');
                         if (parsed == null || parsed <= 0) return 'Amount must be greater than zero.';
@@ -509,7 +540,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                       },
                     ),
                   ),
-                  Text('AMOUNT', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, letterSpacing: 1.2, color: AppTheme.carbonText.withOpacity(0.4))),
+                  Text('AMOUNT', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, letterSpacing: 1.2, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
                 ],
               ),
             ),
@@ -536,6 +567,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                       children: [
                         const Text('CATEGORY', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0)),
                         _pickerRow(
+                          context: context,
                           icon: Icons.category_outlined,
                           label: selectedCategoryName,
                           onTap: () => _pickFromSheet<dynamic>(
@@ -557,6 +589,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                     children: [
                       Text(_isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT', style: const TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0)),
                       _pickerRow(
+                        context: context,
                         icon: Icons.account_balance_wallet_outlined,
                         label: selectedAccountName,
                         onTap: () => _pickFromSheet<dynamic>(
@@ -578,6 +611,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
               const SizedBox(height: 20),
               const Text('TO ACCOUNT', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0)),
               _pickerRow(
+                context: context,
                 icon: Icons.account_balance_wallet_outlined,
                 label: accounts.where((a) => a.id == _selectedDestAccountId).map((a) => a.name).firstOrNull ?? 'Select',
                 onTap: () => _pickFromSheet<dynamic>(
@@ -597,13 +631,13 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
               onTap: () => _selectDate(context),
               child: Container(
                 padding: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppTheme.carbonText.withOpacity(0.15)))),
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15)))),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('${_occurredAt.month.toString().padLeft(2, '0')}/${_occurredAt.day.toString().padLeft(2, '0')}/${_occurredAt.year}',
                         style: const TextStyle(fontFamily: 'PublicSans', fontSize: 15)),
-                    Icon(Icons.calendar_today, size: 18, color: AppTheme.carbonText.withOpacity(0.5)),
+                    Icon(Icons.calendar_today, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                   ],
                 ),
               ),
@@ -612,6 +646,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
             if (!_isTransfer) ...[
               const Divider(height: 32),
               _expandableRow(
+                context: context,
                 icon: Icons.group_add_outlined,
                 label: 'Split with others',
                 expanded: _isSplit,
@@ -624,10 +659,11 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                   }
                 }),
               ),
-              if (_isSplit) _buildSplitRows(),
+              if (_isSplit) _buildSplitRows(context),
 
               const Divider(height: 1),
               _expandableRow(
+                context: context,
                 icon: Icons.handshake_outlined,
                 label: 'This is a debt',
                 expanded: _isDebt,
@@ -643,6 +679,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
 
               const Divider(height: 1),
               _expandableRow(
+                context: context,
                 icon: Icons.autorenew,
                 label: 'Make this recurring',
                 expanded: _isRecurring,
@@ -654,7 +691,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                   }
                 }),
               ),
-              if (_isRecurring) _buildRecurringFields(),
+              if (_isRecurring) _buildRecurringFields(context),
             ],
 
             const SizedBox(height: 32),
@@ -663,8 +700,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
               child: ElevatedButton(
                 onPressed: _saveTransaction,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.carbonText,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+                  foregroundColor: Theme.of(context).colorScheme.onInverseSurface,
                   padding: const EdgeInsets.symmetric(vertical: 18.0),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -677,12 +714,12 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     );
   }
 
-  Widget _buildSplitRows() {
+  Widget _buildSplitRows(BuildContext context) {
     final contacts = ref.watch(contactsListProvider).value ?? [];
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -742,7 +779,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -770,11 +807,11 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     );
   }
 
-  Widget _buildRecurringFields() {
+  Widget _buildRecurringFields(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -805,7 +842,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final amt = _amountController.text;
     final note = _noteController.text;
     
-    if ((amt.isEmpty || amt == '0.00') && note.isEmpty) {
+    if (amt.isEmpty && note.isEmpty) {
       await _clearDraft();
       return;
     }
@@ -846,7 +883,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final prefs = await SharedPreferences.getInstance();
     final amt = prefs.getString('draft_amount');
     final note = prefs.getString('draft_note');
-    if ((amt == null || amt == '0.00') && (note == null || note.isEmpty)) return;
+    if ((amt == null || amt.isEmpty) && (note == null || note.isEmpty)) return;
     
     if (!mounted) return;
     
@@ -873,7 +910,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     
     if (confirm == true && mounted) {
       setState(() {
-        _amountController.text = amt ?? '0.00';
+        _amountController.text = amt ?? '';
         _noteController.text = note ?? '';
         _selectedType = MoneyDirection.values[prefs.getInt('draft_type') ?? 1];
         _isTransfer = prefs.getBool('draft_is_transfer') ?? false;

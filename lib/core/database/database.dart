@@ -147,6 +147,26 @@ class AppDatabase extends _$AppDatabase {
               ),
             ]);
           });
+
+          // Seed a default account so a fresh install can log a transaction
+          // immediately instead of hitting an empty account picker first.
+          await batch((b) {
+            b.insertAll(accounts, [
+              AccountsCompanion.insert(
+                id: 'acc_default_cash',
+                name: 'Cash',
+                accountType: AccountType.cash.index,
+                openingBalanceMinor: 0,
+                currency: 'PHP',
+                icon: 'cash',
+                displayOrder: 0,
+                isArchived: false,
+                createdAt: now,
+                updatedAt: now,
+                syncStatus: SyncStatus.localOnly.index,
+              ),
+            ]);
+          });
         },
       );
 }

@@ -80,7 +80,7 @@ class CategoriesPage extends ConsumerWidget {
         try {
           catColor = Color(int.parse(cat.color.replaceFirst('#', '0xFF')));
         } catch (_) {
-          catColor = AppTheme.oceanBlue;
+          catColor = Theme.of(context).colorScheme.primary;
         }
 
         final item = ListTile(
@@ -104,11 +104,13 @@ class CategoriesPage extends ConsumerWidget {
             style: TextStyle(
               fontFamily: 'PublicSans',
               fontSize: 12,
-              color: cat.isSystem ? AppTheme.carbonText.withOpacity(0.4) : AppTheme.oceanBlue.withOpacity(0.6),
+              color: cat.isSystem
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.4)
+                  : Theme.of(context).colorScheme.primary.withOpacity(0.6),
             ),
           ),
           trailing: cat.isSystem
-              ? Icon(Icons.lock_outline, color: AppTheme.carbonText.withOpacity(0.3), size: 16)
+              ? Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3), size: 16)
               : null,
         );
 
@@ -118,6 +120,10 @@ class CategoriesPage extends ConsumerWidget {
 
         return Dismissible(
           key: Key(cat.id),
+          dismissThresholds: const {
+            DismissDirection.startToEnd: 0.65,
+            DismissDirection.endToStart: 0.65,
+          },
           background: Container(
             color: AppTheme.warningAmber.withOpacity(0.15),
             alignment: Alignment.centerLeft,
@@ -305,13 +311,13 @@ class CategoriesPage extends ConsumerWidget {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: isSelected ? AppTheme.oceanBlue.withOpacity(0.12) : Colors.transparent,
-                              border: Border.all(color: isSelected ? AppTheme.oceanBlue : Colors.grey.withOpacity(0.2)),
+                              color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Colors.transparent,
+                              border: Border.all(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.2)),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               iconNameMapping[iconKey] ?? Icons.category_outlined,
-                              color: isSelected ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.7),
+                              color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               size: 18,
                             ),
                           ),

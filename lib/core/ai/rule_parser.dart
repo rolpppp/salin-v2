@@ -104,13 +104,18 @@ class RuleParser implements AIProvider {
       if (tagCategory != null) {
         // Map common spec tags to database seeded ones
         if (tagCategory == 'dorm') {
-          categoryId = 'rent';
+          categoryId = 'cat_rent';
         } else if (tagCategory == 'leisure') {
-          categoryId = 'entertainment';
+          categoryId = 'cat_entertainment';
         } else if (tagCategory == 'academics') {
-          categoryId = 'utilities';
+          categoryId = 'cat_utilities';
+        } else if (_realCategorySuffixes.contains(tagCategory)) {
+          categoryId = 'cat_$tagCategory';
         } else {
-          categoryId = tagCategory;
+          // Unrecognized #tag: don't fabricate a category id that doesn't
+          // exist in the categories table (would produce a dangling
+          // reference invisible to every category-scoped budget).
+          categoryId = null;
         }
       } else {
         categoryId = _mapCategory(lowerDesc, isIncome);
@@ -148,7 +153,27 @@ class RuleParser implements AIProvider {
     );
   }
 
+  // The full set of real category id suffixes seeded in the database
+  // (see database.dart onCreate). Used to validate arbitrary #tag values
+  // before turning them into a 'cat_' prefixed id.
+  static const _realCategorySuffixes = {
+    'food',
+    'transport',
+    'rent',
+    'utilities',
+    'entertainment',
+    'salary',
+    'investments',
+    'other_income',
+  };
+
   bool _isIncomeKeyword(String desc) {
+    // 'deposit' and 'interest' were removed: both are ambiguous in real
+    // usage ("security deposit" is an expense; "interest" can go either
+    // way), and unanchored substring matching used to let them false
+    // positive against expenses like "Security deposit 5000". Matching is
+    // now whole-word only so e.g. "Pinterest ads 500" no longer matches
+    // "interest" as a substring.
     const incomeKeywords = {
       'salary',
       'wage',
@@ -156,40 +181,40 @@ class RuleParser implements AIProvider {
       'income',
       'bonus',
       'dividend',
-      'interest',
       'payday',
       'refund',
-      'deposit',
       'cash-in',
       'cashin',
     };
-    return incomeKeywords.any((kw) => desc.contains(kw));
+    return incomeKeywords.any(
+      (kw) => RegExp(r'\b' + RegExp.escape(kw) + r'\b').hasMatch(desc),
+    );
   }
 
   String? _mapCategory(String desc, bool isIncome) {
     if (isIncome) {
       if (desc.contains('salary') || desc.contains('wage') || desc.contains('payday')) {
-        return 'salary';
+        return 'cat_salary';
       }
       if (desc.contains('invest') || desc.contains('stock') || desc.contains('crypto')) {
-        return 'investments';
+        return 'cat_investments';
       }
-      return 'other_income';
+      return 'cat_other_income';
     } else {
       if (const {'food', 'lunch', 'dinner', 'breakfast', 'coffee', 'starbucks', 'jollibee', 'mcdonalds', 'kfc', 'restaurant', 'snack', 'groceries', 'grocery', 'ozone', 'coke', 'meals', 'eat'}.any((kw) => desc.contains(kw))) {
-        return 'food';
+        return 'cat_food';
       }
       if (const {'transport', 'grab', 'taxi', 'bus', 'jeep', 'tricycle', 'angkas', 'fuel', 'gas', 'fare', 'toll', 'uber', 'flight', 'ride', 'travel'}.any((kw) => desc.contains(kw))) {
-        return 'transport';
+        return 'cat_transport';
       }
       if (const {'rent', 'apartment', 'condo', 'housing', 'room', 'lease', 'dorm'}.any((kw) => desc.contains(kw))) {
-        return 'rent';
+        return 'cat_rent';
       }
       if (const {'utilities', 'electricity', 'water', 'internet', 'wifi', 'meralco', 'phone', 'load', 'bill', 'subscription', 'netflix', 'spotify', 'academics'}.any((kw) => desc.contains(kw))) {
-        return 'utilities';
+        return 'cat_utilities';
       }
       if (const {'entertainment', 'movie', 'cinema', 'game', 'gig', 'concert', 'arcade', 'bar', 'beer', 'drink', 'recreation', 'hobby', 'leisure'}.any((kw) => desc.contains(kw))) {
-        return 'entertainment';
+        return 'cat_entertainment';
       }
       return null;
     }

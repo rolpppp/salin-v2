@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/onboarding_config.dart';
+import '../services/sync/sync_providers.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/transactions/presentation/pages/transactions_page.dart';
 import '../../features/transactions/presentation/pages/add_transaction_page.dart';
@@ -16,14 +18,22 @@ import '../../features/settings/presentation/pages/categories_page.dart';
 import '../../shared/widgets/app_scaffold.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  // Computed once, synchronously, at router construction — see
+  // OnboardingConfig.shouldShowOnboarding for the retroactive
+  // existing-user heuristic and why it can't be an async ledger read.
+  final shouldShowOnboarding = OnboardingConfig.shouldShowOnboarding(prefs);
+
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: '/',
+    initialLocation: shouldShowOnboarding ? '/onboarding' : '/',
     routes: [
       ShellRoute(
         navigatorKey: shellNavigatorKey,
@@ -114,6 +124,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      // Deliberately a root-level route, NOT nested inside ShellRoute above
+      // — nesting it there would make it inherit AppScaffold's bottom nav,
+      // which must never appear during onboarding.
+      GoRoute(
+        path: '/onboarding',
+        // Bounces back to Home if already completed, so the route can't be
+        // re-entered via deep link, hot restart, or back navigation after
+        // completion.
+        redirect: (context, state) {
+          final completed = prefs.getBool(OnboardingConfig.completedKey) ?? false;
+          return completed ? '/' : null;
+        },
+        builder: (context, state) => const OnboardingPage(),
       ),
     ],
   );

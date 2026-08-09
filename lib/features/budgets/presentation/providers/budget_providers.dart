@@ -112,12 +112,29 @@ final budgetSummaryProvider = Provider.family<AsyncValue<BudgetSummary>, String>
 
                   final limitCategoryIds = limits.map((l) => l.categoryId).toSet();
 
+                  // Requires a categoryId: per-category attribution below
+                  // needs a specific category to credit spend against, so
+                  // uncategorized entries are intentionally excluded here.
                   final qualifiedExpenses = entries.where((e) {
                     final occurredMs = e.occurredAt.millisecondsSinceEpoch;
                     return e.direction == MoneyDirection.outflow &&
                            occurredMs >= startMs &&
                            occurredMs <= endMs &&
                            e.categoryId != null &&
+                           (limitCategoryIds.isEmpty || limitCategoryIds.contains(e.categoryId));
+                  }).toList();
+
+                  // Same criteria minus the categoryId requirement, used
+                  // only for the whole-budget total in the no-per-category
+                  // -limits branch below. Uncategorized expenses still
+                  // reduce "what's left" for the budget as a whole, even
+                  // though they can't be attributed to a specific
+                  // category's card.
+                  final allQualifiedExpenses = entries.where((e) {
+                    final occurredMs = e.occurredAt.millisecondsSinceEpoch;
+                    return e.direction == MoneyDirection.outflow &&
+                           occurredMs >= startMs &&
+                           occurredMs <= endMs &&
                            (limitCategoryIds.isEmpty || limitCategoryIds.contains(e.categoryId));
                   }).toList();
 
@@ -164,7 +181,7 @@ final budgetSummaryProvider = Provider.family<AsyncValue<BudgetSummary>, String>
                       ));
                     }
                   } else {
-                    totalSpent = qualifiedExpenses.fold<int>(0, (sum, e) => sum + e.amountMinor);
+                    totalSpent = allQualifiedExpenses.fold<int>(0, (sum, e) => sum + e.amountMinor);
                   }
 
                   return AsyncValue.data(BudgetSummary(

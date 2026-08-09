@@ -12,11 +12,12 @@ import '../../../../core/services/sync/sync_service.dart';
 import '../../../../core/services/sync/sync_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/settings_provider.dart';
+import '../../../../core/config/ai_config.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4.0, top: 24.0, bottom: 8.0),
       child: Text(
@@ -25,7 +26,7 @@ class SettingsPage extends ConsumerWidget {
           fontFamily: 'PublicSans',
           fontWeight: FontWeight.bold,
           fontSize: 11,
-          color: AppTheme.carbonText.withOpacity(0.5),
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           letterSpacing: 1.2,
         ),
       ),
@@ -117,26 +118,6 @@ class SettingsPage extends ConsumerWidget {
     final settingsAsync = ref.watch(settingsStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/salin-logo.png',
-              height: 28,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Salin',
-              style: TextStyle(
-                fontFamily: 'PublicSans',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
       body: SafeArea(
         child: settingsAsync.when(
           data: (settings) {
@@ -145,27 +126,27 @@ class SettingsPage extends ConsumerWidget {
               children: [
                 const SizedBox(height: 8),
                 const SizedBox(height: 16),
-                const Padding(
-                  padding: EdgeInsets.only(left: 4.0),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4.0),
                   child: Text(
                     'Settings',
                     style: TextStyle(
                       fontFamily: 'PublicSans',
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.carbonText,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
 
                 // 1. APPEARANCE
-                _buildSectionTitle('APPEARANCE'),
+                _buildSectionTitle(context, 'APPEARANCE'),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.carbonText.withOpacity(0.06)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
                   ),
                   child: Column(
                     children: [
@@ -177,13 +158,13 @@ class SettingsPage extends ConsumerWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Midnight mode',
                                   style: TextStyle(
                                     fontFamily: 'PublicSans',
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.carbonText,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -192,14 +173,14 @@ class SettingsPage extends ConsumerWidget {
                                   style: TextStyle(
                                     fontFamily: 'PublicSans',
                                     fontSize: 12,
-                                    color: AppTheme.carbonText.withOpacity(0.5),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                   ),
                                 ),
                               ],
                             ),
                             Checkbox(
                               value: settings.themeMode == 1,
-                              activeColor: AppTheme.oceanBlue,
+                              activeColor: Theme.of(context).colorScheme.primary,
                               onChanged: (val) {
                                 if (val != null) {
                                   ref.read(settingsRepositoryProvider).updateSettings(
@@ -220,22 +201,22 @@ class SettingsPage extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Accent theme',
                                   style: TextStyle(
                                     fontFamily: 'PublicSans',
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.carbonText,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 Text(
                                   settings.accentTheme.toUpperCase(),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'PublicSans',
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.oceanBlue,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                               ],
@@ -262,38 +243,38 @@ class SettingsPage extends ConsumerWidget {
                 ),
 
                 // 2. FINANCIAL TOOLS
-                _buildSectionTitle('FINANCIAL TOOLS'),
+                _buildSectionTitle(context, 'FINANCIAL TOOLS'),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.carbonText.withOpacity(0.06)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
                   ),
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.people_outline, color: AppTheme.carbonText),
+                        leading: Icon(Icons.people_outline, color: Theme.of(context).colorScheme.onSurface),
                         title: const Text('Manage Contacts', style: TextStyle(fontFamily: 'PublicSans')),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                         onTap: () => context.go('/contacts'),
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.category_outlined, color: AppTheme.carbonText),
+                        leading: Icon(Icons.category_outlined, color: Theme.of(context).colorScheme.onSurface),
                         title: const Text('Manage Categories', style: TextStyle(fontFamily: 'PublicSans')),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                         onTap: () => context.go('/categories'),
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.event_repeat, color: AppTheme.carbonText),
+                        leading: Icon(Icons.event_repeat, color: Theme.of(context).colorScheme.onSurface),
                         title: const Text('Recurring Schedules', style: TextStyle(fontFamily: 'PublicSans')),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                         onTap: () => context.go('/recurring'),
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.handshake_outlined, color: AppTheme.carbonText),
+                        leading: Icon(Icons.handshake_outlined, color: Theme.of(context).colorScheme.onSurface),
                         title: const Text('Shared Splits & Loans', style: TextStyle(fontFamily: 'PublicSans')),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                         onTap: () => context.go('/splits_debts'),
@@ -303,12 +284,12 @@ class SettingsPage extends ConsumerWidget {
                 ),
 
                 // 3. PREFERENCES
-                _buildSectionTitle('PREFERENCES'),
+                _buildSectionTitle(context, 'PREFERENCES'),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.carbonText.withOpacity(0.06)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
                   ),
                   child: Column(
                     children: [
@@ -321,7 +302,7 @@ class SettingsPage extends ConsumerWidget {
                               settings.currency,
                               style: TextStyle(
                                 fontFamily: 'PublicSans',
-                                color: AppTheme.carbonText.withOpacity(0.5),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -340,7 +321,7 @@ class SettingsPage extends ConsumerWidget {
                               settings.weekStart == 7 ? 'Sunday' : 'Monday',
                               style: TextStyle(
                                 fontFamily: 'PublicSans',
-                                color: AppTheme.carbonText.withOpacity(0.5),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -354,33 +335,33 @@ class SettingsPage extends ConsumerWidget {
                 ),
 
                 // 4. SECURITY
-                _buildSectionTitle('SECURITY'),
+                _buildSectionTitle(context, 'SECURITY'),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.carbonText.withOpacity(0.06)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                     child: Row(
                       children: [
-                        const Icon(Icons.fingerprint, color: AppTheme.oceanBlue, size: 24),
+                        Icon(Icons.fingerprint, color: Theme.of(context).colorScheme.primary, size: 24),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Biometric lock',
                             style: TextStyle(
                               fontFamily: 'PublicSans',
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.carbonText,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
                         Checkbox(
                           value: settings.biometricLock,
-                          activeColor: AppTheme.oceanBlue,
+                          activeColor: Theme.of(context).colorScheme.primary,
                           onChanged: (val) {
                             if (val != null) {
                               ref.read(settingsRepositoryProvider).updateSettings(
@@ -394,13 +375,77 @@ class SettingsPage extends ConsumerWidget {
                   ),
                 ),
 
-                // 5. CLOUD SYNCHRONIZATION
-                _buildSectionTitle('CLOUD SYNCHRONIZATION'),
+                // 4b. AI & PRIVACY
+                _buildSectionTitle(context, 'AI & PRIVACY'),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.carbonText.withOpacity(0.06)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
+                  ),
+                  child: Consumer(
+                    builder: (context, ref, child) {
+                      final cloudAiEnabled = ref.watch(cloudAiEnabledProvider);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.cloud_sync_outlined, color: Theme.of(context).colorScheme.primary, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                                    child: Text(
+                                      'Use Cloud AI for Quick Add',
+                                      style: TextStyle(
+                                        fontFamily: 'PublicSans',
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12.0),
+                                    child: Text(
+                                      "Falls back to Google Gemini for messy input Salin can't parse on-device. Off by default — your entries stay on this device unless you turn this on.",
+                                      style: TextStyle(
+                                        fontFamily: 'PublicSans',
+                                        fontSize: 12,
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Checkbox(
+                              value: cloudAiEnabled,
+                              activeColor: Theme.of(context).colorScheme.primary,
+                              onChanged: (val) {
+                                if (val != null) {
+                                  ref.read(cloudAiEnabledProvider.notifier).setEnabled(val);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // 5. CLOUD SYNCHRONIZATION
+                _buildSectionTitle(context, 'CLOUD SYNCHRONIZATION'),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
                   ),
                   child: Consumer(
                     builder: (context, ref, child) {
@@ -411,17 +456,17 @@ class SettingsPage extends ConsumerWidget {
                         children: [
                           if (!isAuthed) ...[
                             ListTile(
-                              leading: const Icon(Icons.cloud_off, color: AppTheme.carbonText),
+                              leading: Icon(Icons.cloud_off, color: Theme.of(context).colorScheme.onSurface),
                               title: const Text('Enable Cloud Sync', style: TextStyle(fontFamily: 'PublicSans')),
                               subtitle: const Text('Sign in to sync your data', style: TextStyle(fontFamily: 'PublicSans', fontSize: 12)),
                               trailing: TextButton(
                                 onPressed: () => context.push('/login'),
-                                child: const Text('SIGN IN', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold, color: AppTheme.oceanBlue)),
+                                child: Text('SIGN IN', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
                               ),
                             ),
                           ] else ...[
                             ListTile(
-                              leading: const Icon(Icons.cloud_queue, color: AppTheme.oceanBlue),
+                              leading: Icon(Icons.cloud_queue, color: Theme.of(context).colorScheme.primary),
                               title: const Text('Connected Account', style: TextStyle(fontFamily: 'PublicSans')),
                               subtitle: Text(auth.email ?? '', style: const TextStyle(fontFamily: 'PublicSans', fontSize: 12)),
                               trailing: TextButton(
@@ -434,22 +479,22 @@ class SettingsPage extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.sync, color: AppTheme.carbonText, size: 24),
+                                  Icon(Icons.sync, color: Theme.of(context).colorScheme.onSurface, size: 24),
                                   const SizedBox(width: 12),
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
                                       'Auto Cloud Sync',
                                       style: TextStyle(
                                         fontFamily: 'PublicSans',
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
-                                        color: AppTheme.carbonText,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
                                   Checkbox(
                                     value: settings.syncEnabled,
-                                    activeColor: AppTheme.oceanBlue,
+                                    activeColor: Theme.of(context).colorScheme.primary,
                                     onChanged: (val) {
                                       if (val != null) {
                                         ref.read(settingsRepositoryProvider).updateSettings(
@@ -475,14 +520,14 @@ class SettingsPage extends ConsumerWidget {
                                 }
 
                                 return ListTile(
-                                  leading: const Icon(Icons.sync, color: AppTheme.carbonText),
+                                  leading: Icon(Icons.sync, color: Theme.of(context).colorScheme.onSurface),
                                   title: const Text('Synchronize Now', style: TextStyle(fontFamily: 'PublicSans')),
                                   subtitle: Text(syncSubtitle, style: const TextStyle(fontFamily: 'PublicSans', fontSize: 12)),
                                   trailing: syncState.isSyncing
-                                      ? const SizedBox(
+                                      ? SizedBox(
                                           width: 16,
                                           height: 16,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.oceanBlue),
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary),
                                         )
                                       : const Icon(Icons.sync, color: Colors.grey, size: 18),
                                   onTap: syncState.isSyncing
@@ -500,14 +545,14 @@ class SettingsPage extends ConsumerWidget {
                             ),
                             const Divider(height: 1),
                             ListTile(
-                              leading: const Icon(Icons.cloud_upload_outlined, color: AppTheme.carbonText),
+                              leading: Icon(Icons.cloud_upload_outlined, color: Theme.of(context).colorScheme.onSurface),
                               title: const Text('Upload Cloud Backup', style: TextStyle(fontFamily: 'PublicSans')),
                               trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                               onTap: () => _cloudBackup(context, ref),
                             ),
                             const Divider(height: 1),
                             ListTile(
-                              leading: const Icon(Icons.cloud_download_outlined, color: AppTheme.carbonText),
+                              leading: Icon(Icons.cloud_download_outlined, color: Theme.of(context).colorScheme.onSurface),
                               title: const Text('Restore from Cloud', style: TextStyle(fontFamily: 'PublicSans')),
                               trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                               onTap: () => _cloudRestore(context, ref),
@@ -521,24 +566,24 @@ class SettingsPage extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // 6. BACKUP & SYSTEM
-                _buildSectionTitle('BACKUP & SYSTEM'),
+                _buildSectionTitle(context, 'BACKUP & SYSTEM'),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.carbonText.withOpacity(0.06)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
                   ),
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.backup_outlined, color: AppTheme.carbonText),
+                        leading: Icon(Icons.backup_outlined, color: Theme.of(context).colorScheme.onSurface),
                         title: const Text('Export Backup', style: TextStyle(fontFamily: 'PublicSans')),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                         onTap: () => _exportBackup(context, ref),
                       ),
                       const Divider(height: 1),
                       ListTile(
-                        leading: const Icon(Icons.settings_backup_restore, color: AppTheme.carbonText),
+                        leading: Icon(Icons.settings_backup_restore, color: Theme.of(context).colorScheme.onSurface),
                         title: const Text('Restore Backup', style: TextStyle(fontFamily: 'PublicSans')),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                         onTap: () => _restoreBackup(context, ref),
@@ -548,12 +593,12 @@ class SettingsPage extends ConsumerWidget {
                 ),
 
                 // 6. SUPPORT
-                _buildSectionTitle('SUPPORT'),
+                _buildSectionTitle(context, 'SUPPORT'),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.carbonText.withOpacity(0.06)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06)),
                   ),
                   child: Column(
                     children: [

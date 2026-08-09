@@ -51,27 +51,8 @@ class HomePage extends ConsumerWidget {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add, size: 28),
       ),
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/salin-logo.png',
-              height: 28,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Salin',
-              style: TextStyle(
-                fontFamily: 'PublicSans',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -253,7 +234,7 @@ class HomePage extends ConsumerWidget {
                             if (pending.isEmpty) {
                               return Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5))),
+                                child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                               );
                             }
                             final rules = recurringRulesAsync.value ?? [];
@@ -300,7 +281,7 @@ class HomePage extends ConsumerWidget {
                               if (pending.isEmpty) {
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5))),
+                                  child: Text('No upcoming obligations', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                                 );
                               }
                               final rules = recurringRulesAsync.value ?? [];
@@ -363,8 +344,19 @@ class HomePage extends ConsumerWidget {
             recentEntriesAsync.when(
               data: (entries) {
                 if (entries.isEmpty) {
-                  return const EmptyState(
-                    message: "No transactions recorded yet.",
+                  final hasAccounts = (accountsAsync.value ?? []).where((a) => !a.isArchived).isNotEmpty;
+                  if (!hasAccounts) {
+                    return EmptyState(
+                      message: "Add an account to start tracking your spending.",
+                      icon: Icons.account_balance_wallet_outlined,
+                      actionLabel: 'Add Account',
+                      onAction: () => context.go('/accounts'),
+                    );
+                  }
+                  return EmptyState(
+                    message: "Nothing logged yet. Try typing a line like Lunch 180.",
+                    actionLabel: 'Log something',
+                    onAction: () => context.go('/add'),
                   );
                 }
                 final recent = entries.take(3).toList();
@@ -415,6 +407,7 @@ class HomePage extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -646,7 +639,7 @@ class HomePage extends ConsumerWidget {
                               fontFamily: 'IBMPlexMono',
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: isOverspent ? AppTheme.inkRed : AppTheme.oceanBlue,
+                              color: isOverspent ? AppTheme.inkRed : Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -969,7 +962,7 @@ class _OwedToYouBentoList extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
                   'No outstanding balances',
-                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5)),
+                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                 ),
               );
             }

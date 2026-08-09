@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../accounts/presentation/providers/account_providers.dart';
 import '../../domain/entities/review_item.dart';
-import '../../domain/entities/category.dart';
-import '../../../../core/ai/parsed_transaction.dart';
+import '../../../../core/ai/ai_validator.dart';
+import '../../../../core/config/ai_config.dart';
 import '../providers/transaction_providers.dart';
 import '../providers/transaction_review_provider.dart';
 
@@ -68,12 +68,42 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
     setState(() => _isParsing = false);
 
     if (result.isSuccess) {
-      if (result.provider == 'Rule Parser') {
-        setState(() {
-          _isOfflineMode = true;
-        });
+      final parsedData = result.parsedData!;
+      final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
+      final defaultAccountId = accounts.isNotEmpty ? accounts.first.id : null;
+
+      if (parsedData.length == 1 && defaultAccountId != null) {
+        final parsed = parsedData.first;
+        final warnings = AIValidator.validate(parsed);
+        if (warnings.isEmpty) {
+          final account = accounts.first;
+          // Capture the repository instance itself (not a deferred `ref.read`)
+          // so UNDO still works if the user navigates away and this widget
+          // is disposed before the snackbar action is tapped — `ref` is tied
+          // to this State's lifecycle, but the repository object is not.
+          final repo = ref.read(transactionRepositoryProvider);
+          final createdEntry = await repo.createFromParsed(parsed, accountId: defaultAccountId);
+          _inputController.clear();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Saved ₱${(parsed.amountMinor! / 100).toStringAsFixed(2)} · ${parsed.description} → ${account.name}'),
+              action: SnackBarAction(
+                label: 'UNDO',
+                onPressed: () async {
+                  await repo.deleteLedgerEntry(createdEntry.id);
+                },
+              ),
+            ),
+          );
+          // Re-check connectivity so the offline banner (if any) reflects
+          // live state rather than only what was known at screen-open.
+          _checkConnectivity();
+          return;
+        }
       }
-      for (final parsed in result.parsedData!) {
+
+      for (final parsed in parsedData) {
         ref.read(transactionReviewProvider.notifier).stageTransaction(text, parsed);
       }
       _inputController.clear();
@@ -89,7 +119,14 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
     final reviewItems = ref.watch(transactionReviewProvider);
     final accountsAsync = ref.watch(accountsListProvider);
     final activeAccounts = (accountsAsync.value ?? []).where((a) => !a.isArchived).toList();
+    // Free-form parsing (e.g. "Spent ₱150 on coffee at Ozone") only actually
+    // works when Cloud AI is on and reachable; Cloud AI defaults to off, so
+    // the input hint should show the structured format that always works
+    // offline unless the user has actually opted into cloud fallback.
+    final cloudAiEnabled = ref.watch(cloudAiEnabledProvider);
+    final showStructuredHint = _isOfflineMode || !cloudAiEnabled;
     final defaultAccountId = activeAccounts.isNotEmpty ? activeAccounts.first.id : null;
+    final defaultAccountName = activeAccounts.isNotEmpty ? activeAccounts.first.name : null;
     final hasBlockingItem = reviewItems.any((item) => item.warnings.isNotEmpty);
 
     return SingleChildScrollView(
@@ -132,7 +169,7 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
                           style: TextStyle(
                             fontFamily: 'PublicSans',
                             fontSize: 12,
-                            color: AppTheme.carbonText.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             height: 1.4,
                           ),
                         ),
@@ -145,9 +182,9 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
           ],
           Container(
             decoration: BoxDecoration(
-              color: AppTheme.cardBg,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.carbonText.withOpacity(0.08)),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
             ),
             child: Column(
               children: [
@@ -155,35 +192,37 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: TextField(
                     controller: _inputController,
+                    autofocus: true,
                     maxLines: 4,
                     minLines: 3,
                     style: const TextStyle(fontFamily: 'PublicSans', fontSize: 14),
                     decoration: InputDecoration(
                       border: InputBorder.none,
-                      hintText: _isOfflineMode
-                          ? "Enter offline transactions (one per line)...\ne.g. '150 lunch #food'"
+                      // The structured-format example intentionally matches
+                      // onboarding page 3's taught example ("Lunch 180") —
+                      // that screen is the first thing most users see before
+                      // this field, so its lesson and this hint must agree.
+                      hintText: showStructuredHint
+                          ? "Enter transactions, one per line...\ne.g. 'Lunch 180'"
                           : "Paste a receipt, bank SMS, or describe your transaction...\ne.g., 'Spent ₱150 on coffee at Ozone yesterday'",
-                      hintStyle: TextStyle(color: AppTheme.carbonText.withOpacity(0.35)),
+                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35)),
                     ),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                    border: Border(top: BorderSide(color: AppTheme.carbonText.withOpacity(0.06))),
+                    border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06))),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.receipt_long_outlined, size: 20, color: AppTheme.carbonText.withOpacity(0.5)),
-                      const SizedBox(width: 14),
-                      Icon(Icons.mic_none_outlined, size: 20, color: AppTheme.carbonText.withOpacity(0.5)),
                       const Spacer(),
                       ElevatedButton.icon(
                         onPressed: _isParsing ? null : _handleParse,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.oceanBlue,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
@@ -205,11 +244,11 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Parsed Transactions', style: TextStyle(fontFamily: 'PublicSans', fontSize: 15, fontWeight: FontWeight.w600)),
-                Text('${reviewItems.length} ITEMS FOUND', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5), letterSpacing: 0.5)),
+                Text('${reviewItems.length} ITEMS FOUND', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), letterSpacing: 0.5)),
               ],
             ),
             const SizedBox(height: 12),
-            ...reviewItems.map((item) => _ReviewCard(item: item, defaultAccountId: defaultAccountId)),
+            ...reviewItems.map((item) => _ReviewCard(item: item, defaultAccountId: defaultAccountId, defaultAccountName: defaultAccountName)),
 
             const SizedBox(height: 8),
             SizedBox(
@@ -219,10 +258,10 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
                     ? null
                     : () => ref.read(transactionReviewProvider.notifier).confirmAll(accountId: defaultAccountId),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.carbonText.withOpacity(0.08),
-                  foregroundColor: AppTheme.carbonText.withOpacity(0.5),
-                  disabledBackgroundColor: AppTheme.carbonText.withOpacity(0.08),
-                  disabledForegroundColor: AppTheme.carbonText.withOpacity(0.4),
+                  backgroundColor: hasBlockingItem ? Theme.of(context).colorScheme.onSurface.withOpacity(0.08) : Theme.of(context).colorScheme.primary,
+                  foregroundColor: hasBlockingItem ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) : Colors.white,
+                  disabledBackgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+                  disabledForegroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -244,8 +283,9 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
 class _ReviewCard extends ConsumerWidget {
   final ReviewItem item;
   final String? defaultAccountId;
+  final String? defaultAccountName;
 
-  const _ReviewCard({required this.item, required this.defaultAccountId});
+  const _ReviewCard({required this.item, required this.defaultAccountId, this.defaultAccountName});
 
   void _showEditSheet(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.read(categoriesListProvider);
@@ -337,7 +377,7 @@ class _ReviewCard extends ConsumerWidget {
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.oceanBlue,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -363,7 +403,7 @@ class _ReviewCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppTheme.cardBg,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: borderColor, width: 4)),
       ),
@@ -379,7 +419,7 @@ class _ReviewCard extends ConsumerWidget {
               ),
               Text(
                 txn.amountMinor != null ? '₱${(txn.amountMinor! / 100).toStringAsFixed(2)}' : '—',
-                style: TextStyle(fontFamily: 'IBMPlexMono', fontWeight: FontWeight.w600, color: isIncome ? AppTheme.oceanBlue : AppTheme.carbonText),
+                style: TextStyle(fontFamily: 'IBMPlexMono', fontWeight: FontWeight.w600, color: isIncome ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface),
               ),
             ],
           ),
@@ -396,10 +436,17 @@ class _ReviewCard extends ConsumerWidget {
               const Spacer(),
               Text(
                 txn.transactionDate != null ? _relativeLabel(txn.transactionDate!) : '',
-                style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: AppTheme.carbonText.withOpacity(0.5)),
+                style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
               ),
             ],
           ),
+          if (defaultAccountName != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '→ $defaultAccountName',
+              style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
@@ -421,10 +468,10 @@ class _ReviewCard extends ConsumerWidget {
                       ? null
                       : () => ref.read(transactionReviewProvider.notifier).confirmItem(item.id, accountId: defaultAccountId!),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.cardBg,
-                    foregroundColor: AppTheme.oceanBlue,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    foregroundColor: Theme.of(context).colorScheme.primary,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppTheme.oceanBlue.withOpacity(0.3))),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.3))),
                   ),
                   child: const Text('Looks Good', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
@@ -455,11 +502,11 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = color ?? AppTheme.carbonText.withOpacity(0.6);
+    final tone = color ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: (color ?? AppTheme.carbonText).withOpacity(0.1),
+        color: (color ?? Theme.of(context).colorScheme.onSurface).withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
         border: color != null ? Border.all(color: color!.withOpacity(0.4)) : null,
       ),

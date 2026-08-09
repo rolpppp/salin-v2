@@ -11,6 +11,7 @@ import 'rule_parser.dart';
 import 'gemini_cloud_provider.dart';
 import 'parsed_transaction_adapter.dart';
 import 'local_ai_service.dart';
+import '../config/ai_config.dart';
 
 class AIService {
   final List<AIProvider> _providers;
@@ -103,43 +104,79 @@ JSON SCHEMA:
       }
     }
 
-    // 2. Connectivity check (fast pre-filter)
-    final isOnline = await _checkFastPreFilter();
+    // 2. Rule Parser first — always. It's synchronous, instant, offline,
+    // and free, and it already handles the exact-format case ("Lunch 180")
+    // that most Quick Add input actually is. Cloud is only ever consulted
+    // as a fallback for ambiguous/unparseable input, and only with
+    // explicit user consent — see step 3 below. This matches the
+    // documented privacy order: Rule Parser -> Native -> Cloud (opt-in).
+    final ruleParser = _providers.firstWhere((p) => p is RuleParser, orElse: () => RuleParser());
 
-    AIProvider activeProvider = isOnline
-        ? _providers.firstWhere((p) => p is GeminiCloudProvider, orElse: () => GeminiCloudProvider())
-        : _providers.firstWhere((p) => p is RuleParser, orElse: () => RuleParser());
-
-    if (!isOnline) {
-      debugPrint('[AI Routing] ℹ️ Device is offline (pre-filter). Routing directly to RuleParser.');
-    } else {
-      debugPrint('[AI Routing] ℹ️ Device is online (pre-filter). Routing to GeminiCloudProvider.');
+    InferenceResult<List<ParsedTransaction>>? ruleResult;
+    Object? ruleParserError;
+    try {
+      ruleResult = await ruleParser.parseTransaction(rawText);
+    } catch (e) {
+      ruleParserError = e;
     }
 
-    InferenceResult<List<ParsedTransaction>> inferenceResult;
-    try {
-      try {
-        inferenceResult = await activeProvider.parseTransaction(rawText);
-      } catch (e) {
-        if (activeProvider is GeminiCloudProvider) {
-          debugPrint('[AI Routing] ⚠️ Gemini Cloud call failed with error: $e. Degrading to RuleParser.');
-          final ruleParser = _providers.firstWhere((p) => p is RuleParser, orElse: () => RuleParser());
-          inferenceResult = await ruleParser.parseTransaction(rawText);
-        } else {
-          rethrow;
-        }
-      }
-    } catch (e) {
+    AIResult<List<ParsedTransaction>> ruleParserFailureResult() {
       return AIResult<List<ParsedTransaction>>(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        provider: activeProvider.name,
+        provider: ruleParser.name,
         source: 'Text',
         processingTime: DateTime.now().difference(startTime),
         confidence: 0.0,
         warnings: const [],
         rawResponse: '',
-        errorMessage: e is FormatException ? e.message : 'Failed parsing transaction: $e',
+        errorMessage: ruleParserError is FormatException
+            ? ruleParserError.message
+            : 'Failed parsing transaction: $ruleParserError',
       );
+    }
+
+    // Every line matched the exact "<amount> <description>" format — no
+    // ambiguity, so return instantly without ever touching the network.
+    final ruleParserConfident = ruleResult != null &&
+        ruleResult.parsedPayload.every((tx) => tx.notes != 'needs_review');
+
+    InferenceResult<List<ParsedTransaction>> inferenceResult;
+    AIProvider activeProvider;
+
+    if (ruleParserConfident) {
+      debugPrint('[AI Routing] 🔍 Rule Parser matched exactly. Skipping cloud entirely.');
+      inferenceResult = ruleResult;
+      activeProvider = ruleParser;
+    } else {
+      // 3. Ambiguous parse (needs_review) or no parse at all — only
+      // escalate to Gemini if the user has opted in to cloud AI AND the
+      // device is online. Otherwise surface the Rule Parser's best-effort
+      // result as-is; ambiguous lines show as NEEDS REVIEW for manual
+      // editing, which is an acceptable non-blocking path.
+      final cloudEnabled = await AIConfig.isCloudAiEnabled();
+      final isOnline = cloudEnabled && await _checkFastPreFilter();
+
+      if (cloudEnabled && isOnline) {
+        activeProvider = _providers.firstWhere((p) => p is GeminiCloudProvider, orElse: () => GeminiCloudProvider());
+        debugPrint('[AI Routing] ☁️ Ambiguous/unparsed input with cloud AI enabled and online. Routing to GeminiCloudProvider.');
+        try {
+          inferenceResult = await activeProvider.parseTransaction(rawText);
+        } catch (e) {
+          debugPrint('[AI Routing] ⚠️ Gemini Cloud call failed with error: $e. Degrading to RuleParser.');
+          activeProvider = ruleParser;
+          if (ruleResult == null) return ruleParserFailureResult();
+          inferenceResult = ruleResult;
+        }
+      } else {
+        debugPrint(
+          '[AI Routing] ℹ️ Ambiguous/unparsed input; cloud AI '
+          '${cloudEnabled ? "enabled but device is offline" : "disabled by user"}. '
+          'Using RuleParser result as-is.',
+        );
+        activeProvider = ruleParser;
+        if (ruleResult == null) return ruleParserFailureResult();
+        inferenceResult = ruleResult;
+      }
     }
 
     final duration = DateTime.now().difference(startTime);

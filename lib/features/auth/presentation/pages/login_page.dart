@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../providers/auth_providers.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -60,13 +59,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Sign In',
                 style: TextStyle(
                   fontFamily: 'IBMPlexMono',
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.carbonText,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -75,7 +74,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 style: TextStyle(
                   fontFamily: 'PublicSans',
                   fontSize: 14,
-                  color: AppTheme.carbonText.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
               const SizedBox(height: 40),
@@ -85,7 +84,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 enabled: !isLoading,
-                style: const TextStyle(fontFamily: 'PublicSans', color: AppTheme.carbonText),
+                style: TextStyle(fontFamily: 'PublicSans', color: Theme.of(context).colorScheme.onSurface),
                 decoration: const InputDecoration(
                   labelText: 'Email Address',
                   labelStyle: TextStyle(fontFamily: 'PublicSans'),
@@ -108,7 +107,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 controller: _passwordController,
                 obscureText: true,
                 enabled: !isLoading,
-                style: const TextStyle(fontFamily: 'PublicSans', color: AppTheme.carbonText),
+                style: TextStyle(fontFamily: 'PublicSans', color: Theme.of(context).colorScheme.onSurface),
                 decoration: const InputDecoration(
                   labelText: 'Password',
                   labelStyle: TextStyle(fontFamily: 'PublicSans'),
@@ -132,16 +131,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.carbonText,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+                    foregroundColor: Theme.of(context).colorScheme.onInverseSurface,
                     padding: const EdgeInsets.symmetric(vertical: 18.0),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onInverseSurface, strokeWidth: 2),
                         )
                       : const Text(
                           'SIGN IN',
@@ -166,7 +165,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     'Need an account? Create one',
                     style: TextStyle(
                       fontFamily: 'PublicSans',
-                      color: AppTheme.carbonText.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       decoration: TextDecoration.underline,
                     ),
                   ),

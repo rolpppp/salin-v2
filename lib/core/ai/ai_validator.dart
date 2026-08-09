@@ -17,10 +17,6 @@ class AIValidator {
       warnings.add('Unsupported transaction type: $type.');
     }
 
-    if (type == 'expense' && transaction.category == null) {
-      warnings.add('Category is required for expenses.');
-    }
-
     if (transaction.notes != null && transaction.notes!.contains('needs_review')) {
       warnings.add('Format did not match exactly: best-effort parse applied.');
     }
