@@ -22,6 +22,20 @@ class AppTheme {
   static const List<String> monoFallbacks = ['RobotoMono', 'monospace'];
   static const List<String> sansFallbacks = ['Roboto', 'sans-serif'];
 
+  // Accent palette — keys match the `accentTheme` value stored in Settings
+  // and the swatches offered on the Settings > Appearance screen.
+  static const Map<String, Color> accentPalette = {
+    'ocean': Color(0xFF2E6EA6),
+    'forest': Color(0xFF2E4C38),
+    'terracotta': Color(0xFFC75A3E),
+    'purple': Color(0xFF7D6FAB),
+    'rose': Color(0xFFD6949F),
+  };
+
+  /// Resolves a persisted `accentTheme` key to its color, falling back to
+  /// the default accent for an unrecognized or null key.
+  static Color resolveAccent(String? key) => accentPalette[key] ?? oceanBlue;
+
   // Typography tokens from DESIGN.md
   static const TextStyle displayHero = TextStyle(
     fontFamily: 'IBMPlexMono',
@@ -88,20 +102,32 @@ class AppTheme {
     fontWeight: FontWeight.w400,
   );
 
-  static ThemeData get lightTheme {
+  /// Builds the light [ThemeData], accepting the user's chosen accent color
+  /// (from Settings > Appearance) so [ColorScheme.primary] — and everything
+  /// downstream that reads it via `Theme.of(context)` — reflects the user's
+  /// choice instead of always being the default ocean blue.
+  static ThemeData lightTheme([Color? accent]) {
+    final primary = accent ?? oceanBlue;
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: paperBg,
-      primaryColor: oceanBlue,
+      primaryColor: primary,
       fontFamily: 'PublicSans',
       fontFamilyFallback: sansFallbacks,
-      colorScheme: const ColorScheme.light(
-        primary: oceanBlue,
+      colorScheme: ColorScheme.light(
+        primary: primary,
         surface: cardBg,
         onSurface: carbonText,
         error: inkRed,
         background: paperBg,
         onBackground: carbonText,
+        // "Stamped ledger" buttons (e.g. primary form submit actions) use
+        // this pairing so they stay high-contrast in both themes — near-
+        // black on white here, and correctly inverted to a light fill with
+        // dark text in darkTheme below, instead of hardcoding white text
+        // that would go unreadable against a light background in dark mode.
+        inverseSurface: carbonText,
+        onInverseSurface: paperBg,
       ),
       cardTheme: CardThemeData(
         color: cardBg,
@@ -145,28 +171,36 @@ class AppTheme {
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: carbonText.withOpacity(0.1)),
         ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: oceanBlue, width: 1.5),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
         labelStyle: TextStyle(color: carbonText.withOpacity(0.6), fontFamily: 'PublicSans', fontFamilyFallback: sansFallbacks),
       ),
     );
   }
 
-  static ThemeData get darkTheme {
+  /// Builds the dark [ThemeData]; see [lightTheme] for the accent parameter.
+  static ThemeData darkTheme([Color? accent]) {
+    final primary = accent ?? oceanBlue;
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: midnightBg,
-      primaryColor: oceanBlue,
+      primaryColor: primary,
       fontFamily: 'PublicSans',
       fontFamilyFallback: sansFallbacks,
-      colorScheme: const ColorScheme.dark(
-        primary: oceanBlue,
+      colorScheme: ColorScheme.dark(
+        primary: primary,
         surface: midnightCardBg,
         onSurface: carbonTextDark,
         error: inkRed,
         background: midnightBg,
         onBackground: carbonTextDark,
+        // See lightTheme's inverseSurface note — inverted here so the same
+        // "stamped ledger" buttons render light-on-dark with a readable
+        // dark foreground, instead of white text on carbonTextDark's light
+        // cream fill.
+        inverseSurface: carbonTextDark,
+        onInverseSurface: midnightBg,
       ),
       cardTheme: CardThemeData(
         color: midnightCardBg,
@@ -210,8 +244,8 @@ class AppTheme {
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: carbonTextDark.withOpacity(0.1)),
         ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: oceanBlue, width: 1.5),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
         labelStyle: TextStyle(color: carbonTextDark.withOpacity(0.6), fontFamily: 'PublicSans', fontFamilyFallback: sansFallbacks),
       ),

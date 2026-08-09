@@ -100,7 +100,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       style: TextStyle(
                                         fontFamily: 'PublicSans',
                                         fontSize: 12,
-                                        color: AppTheme.carbonText.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                       ),
                                     ),
                                   ],
@@ -136,7 +136,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                           fontFamily: 'PublicSans',
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
-                                          color: AppTheme.carbonText.withOpacity(0.5),
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                           letterSpacing: 1.1,
                                         ),
                                       ),
@@ -165,7 +165,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                         fontFamily: 'PublicSans',
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: AppTheme.carbonText.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                         letterSpacing: 1.1,
                                       ),
                                     ),
@@ -175,7 +175,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       style: TextStyle(
                                         fontFamily: 'IBMPlexMono',
                                         fontSize: 15,
-                                        color: AppTheme.carbonText.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                       ),
                                     ),
                                   ],
@@ -193,7 +193,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       borderRadius: BorderRadius.circular(4),
                                       child: LinearProgressIndicator(
                                         value: pct,
-                                        backgroundColor: AppTheme.carbonText.withOpacity(0.08),
+                                        backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
                                         valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.registerGreen),
                                         minHeight: 6,
                                       ),
@@ -204,11 +204,11 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       children: [
                                         Text(
                                           'Paid: ₱${(paid / 100).toStringAsFixed(2)}',
-                                          style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
+                                          style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                                         ),
                                         Text(
                                           '${(pct * 100).round()}% Settled',
-                                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
+                                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                                         ),
                                       ],
                                     ),
@@ -318,7 +318,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                           style: TextStyle(
                                             fontFamily: 'PublicSans',
                                             fontSize: 12,
-                                            color: AppTheme.carbonText.withOpacity(0.5),
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                           ),
                                         ),
                                       ),
@@ -355,7 +355,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                         fontFamily: 'PublicSans',
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: AppTheme.carbonText.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                         letterSpacing: 1.1,
                                       ),
                                     ),
@@ -384,7 +384,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                         fontFamily: 'PublicSans',
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: AppTheme.carbonText.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                         letterSpacing: 1.1,
                                       ),
                                     ),
@@ -394,7 +394,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       style: TextStyle(
                                         fontFamily: 'IBMPlexMono',
                                         fontSize: 15,
-                                        color: AppTheme.carbonText.withOpacity(0.5),
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                       ),
                                     ),
                                   ],
@@ -412,7 +412,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       borderRadius: BorderRadius.circular(4),
                                       child: LinearProgressIndicator(
                                         value: pct,
-                                        backgroundColor: AppTheme.carbonText.withOpacity(0.08),
+                                        backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
                                         valueColor: AlwaysStoppedAnimation<Color>(color),
                                         minHeight: 6,
                                       ),
@@ -423,11 +423,11 @@ class SplitsDebtsPage extends ConsumerWidget {
                                       children: [
                                         Text(
                                           'Settled: ₱${(paid / 100).toStringAsFixed(2)}',
-                                          style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
+                                          style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                                         ),
                                         Text(
                                           '${(pct * 100).round()}% Settled',
-                                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5)),
+                                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                                         ),
                                       ],
                                     ),
@@ -584,7 +584,7 @@ class SplitsDebtsPage extends ConsumerWidget {
                 const Divider(height: 24),
                 Text(
                   'PARTICIPANT SHARES',
-                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.carbonText.withOpacity(0.5), letterSpacing: 1.2),
+                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), letterSpacing: 1.2),
                 ),
                 const SizedBox(height: 8),
                 ...contacts.map((c) {

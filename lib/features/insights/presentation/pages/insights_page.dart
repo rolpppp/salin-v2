@@ -30,26 +30,6 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/salin-logo.png',
-              height: 28,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Salin',
-              style: TextStyle(
-                fontFamily: 'PublicSans',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
       body: SafeArea(
         child: entriesAsync.when(
           data: (entries) {
@@ -115,10 +95,10 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
               card1 = _buildObservationCard(
                 context: context,
                 icon: Icons.stars_outlined,
-                iconColor: AppTheme.oceanBlue,
+                iconColor: Theme.of(context).colorScheme.primary,
                 badgeLabel: 'TRACKING',
-                badgeBgColor: AppTheme.oceanBlue.withOpacity(0.08),
-                badgeTextColor: AppTheme.oceanBlue,
+                badgeBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                badgeTextColor: Theme.of(context).colorScheme.primary,
                 mainText: 'This is your first month of tracking.',
                 subText: "You've recorded ${activeEntries.length} entries so far in ${DateFormat('MMMM').format(activeMonth)}.",
               );
@@ -193,13 +173,13 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                 card1 = _buildObservationCard(
                   context: context,
                   icon: diff <= 0 ? Icons.trending_down : Icons.trending_up,
-                  iconColor: diff <= 0 ? AppTheme.oceanBlue : AppTheme.inkRed,
+                  iconColor: diff <= 0 ? Theme.of(context).colorScheme.primary : AppTheme.inkRed,
                   badgeLabel: diff <= 0 ? 'POSITIVE' : 'OBSERVATION',
                   badgeBgColor: diff <= 0
-                      ? AppTheme.oceanBlue.withOpacity(0.08)
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
                       : onSurfaceColor.withOpacity(0.06),
                   badgeTextColor: diff <= 0
-                      ? AppTheme.oceanBlue
+                      ? Theme.of(context).colorScheme.primary
                       : onSurfaceColor.withOpacity(0.6),
                   mainText: diff <= 0
                       ? 'You spent ${percentage.toStringAsFixed(0)}% less than $comparisonLabel.'
@@ -403,7 +383,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                                       value: maxWeekly > 0 ? weeklyTotals[i] / maxWeekly : 0.0,
                                       minHeight: 6,
                                       backgroundColor: onSurfaceColor.withOpacity(0.06),
-                                      valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.oceanBlue),
+                                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                                     ),
                                   ),
                                 ),
@@ -456,11 +436,11 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                         },
                         child: Text(
                           _showAllCategories ? 'Show Less' : 'View All',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'PublicSans',
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
-                            color: AppTheme.oceanBlue,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -653,7 +633,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                         DateFormat('MMMM yyyy').format(m),
                         style: const TextStyle(fontFamily: 'PublicSans'),
                       ),
-                      trailing: isSelected ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                      trailing: isSelected ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                       onTap: () {
                         setState(() {
                           _selectedMonth = m;

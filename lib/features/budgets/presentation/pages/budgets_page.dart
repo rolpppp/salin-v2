@@ -53,8 +53,8 @@ class BudgetsPage extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _showCreateBudgetDialog(context, ref),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.carbonText,
-                    side: BorderSide(color: AppTheme.carbonText.withOpacity(0.2)),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
@@ -67,7 +67,7 @@ class BudgetsPage extends ConsumerWidget {
                 const SizedBox(height: 28),
                 Text(
                   'ALL BUDGETS',
-                  style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.carbonText.withOpacity(0.5), letterSpacing: 1.2),
+                  style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold, fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), letterSpacing: 1.2),
                 ),
                 const SizedBox(height: 8),
                 Card(
@@ -78,6 +78,10 @@ class BudgetsPage extends ConsumerWidget {
                         children: [
                           Dismissible(
                             key: Key(b.id),
+                            dismissThresholds: const {
+                              DismissDirection.startToEnd: 0.65,
+                              DismissDirection.endToStart: 0.65,
+                            },
                             background: Container(
                               color: AppTheme.warningAmber.withOpacity(0.15),
                               alignment: Alignment.centerLeft,
@@ -276,24 +280,24 @@ class _ActiveBudgetCard extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('TOTAL BUDGET', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.carbonText.withOpacity(0.5), letterSpacing: 1.2)),
-                Text(periodLabel, style: const TextStyle(fontFamily: 'PublicSans', color: AppTheme.carbonText, fontWeight: FontWeight.w600)),
+                Text('TOTAL BUDGET', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), letterSpacing: 1.2)),
+                Text(periodLabel, style: TextStyle(fontFamily: 'PublicSans', color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 6),
             MoneyText(
               amountMinor: summary.totalLimitMinor,
               muteDecimals: true,
-              style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: AppTheme.carbonText),
+              style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 6),
             Row(
               children: [
-                Text('Spent: ', style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.carbonText.withOpacity(0.6))),
-                MoneyText(amountMinor: summary.totalSpentMinor, style: const TextStyle(fontFamily: 'IBMPlexMono', color: AppTheme.carbonText)),
+                Text('Spent: ', style: TextStyle(fontFamily: 'PublicSans', color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                MoneyText(amountMinor: summary.totalSpentMinor, style: TextStyle(fontFamily: 'IBMPlexMono', color: Theme.of(context).colorScheme.onSurface)),
                 const SizedBox(width: 16),
-                Text('Remaining: ', style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.carbonText.withOpacity(0.6))),
-                MoneyText(amountMinor: summary.remainingMinor.abs(), style: const TextStyle(fontFamily: 'IBMPlexMono', color: AppTheme.oceanBlue, fontWeight: FontWeight.w600)),
+                Text('Remaining: ', style: TextStyle(fontFamily: 'PublicSans', color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                MoneyText(amountMinor: summary.remainingMinor.abs(), style: TextStyle(fontFamily: 'IBMPlexMono', color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
               ],
             ),
 
@@ -315,8 +319,8 @@ class _ActiveBudgetCard extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: AppTheme.carbonText.withOpacity(0.06),
-                      child: Icon(mapCategoryIcon(iconKey), size: 20, color: AppTheme.carbonText.withOpacity(0.7)),
+                      backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+                      child: Icon(mapCategoryIcon(iconKey), size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -336,12 +340,12 @@ class _ActiveBudgetCard extends ConsumerWidget {
                             children: [
                               Text(
                                 isPaidFixed ? 'FIXED' : '${(catProgress * 100).clamp(0, 999).toStringAsFixed(0)}% SPENT',
-                                style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.5), letterSpacing: 0.5),
+                                style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), letterSpacing: 0.5),
                               ),
                               Row(
                                 children: [
-                                  Text('/ ', style: TextStyle(color: AppTheme.carbonText.withOpacity(0.5))),
-                                  MoneyText(amountMinor: cat.limitMinor, style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5))),
+                                  Text('/ ', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+                                  MoneyText(amountMinor: cat.limitMinor, style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                                 ],
                               ),
                             ],
@@ -356,8 +360,8 @@ class _ActiveBudgetCard extends ConsumerWidget {
                                     child: LinearProgressIndicator(
                                       value: 1.0,
                                       minHeight: 6,
-                                      backgroundColor: AppTheme.carbonText.withOpacity(0.08),
-                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.carbonText.withOpacity(0.15)),
+                                      backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+                                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onSurface.withOpacity(0.15)),
                                     ),
                                   ),
                                 ),
@@ -376,7 +380,7 @@ class _ActiveBudgetCard extends ConsumerWidget {
                               child: LinearProgressIndicator(
                                 value: catProgress > 1.0 ? 1.0 : catProgress,
                                 minHeight: 6,
-                                backgroundColor: AppTheme.carbonText.withOpacity(0.08),
+                                backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
                                 valueColor: AlwaysStoppedAnimation<Color>(color),
                               ),
                             ),
@@ -385,10 +389,10 @@ class _ActiveBudgetCard extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('₱0', style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: AppTheme.carbonText.withOpacity(0.4))),
+                                Text('₱0', style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
                                 Text(
                                   catOverspent ? 'Over budget' : '${NumberFormat.currency(locale: 'en_PH', symbol: '₱').format(cat.remainingMinor / 100)} left',
-                                  style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: catOverspent ? AppTheme.inkRed : AppTheme.carbonText.withOpacity(0.4)),
+                                  style: TextStyle(fontFamily: 'IBMPlexMono', fontSize: 11, color: catOverspent ? AppTheme.inkRed : Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
                                 ),
                               ],
                             ),
@@ -642,7 +646,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
                   Expanded(
                     child: ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text('Start Date', style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: AppTheme.carbonText.withOpacity(0.5))),
+                      title: Text('Start Date', style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                       subtitle: Text(_startDate.toString().substring(0, 10), style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 14)),
                       trailing: const Icon(Icons.calendar_today, size: 16),
                       onTap: () => _selectStartDate(context),
@@ -652,7 +656,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
                   Expanded(
                     child: ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text('End Date', style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: AppTheme.carbonText.withOpacity(0.5))),
+                      title: Text('End Date', style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                       subtitle: Text(_endDate.toString().substring(0, 10), style: const TextStyle(fontFamily: 'IBMPlexMono', fontSize: 14)),
                       trailing: _period == BudgetPeriod.custom ? const Icon(Icons.calendar_today, size: 16) : null,
                       onTap: _period == BudgetPeriod.custom ? () => _selectEndDate(context) : null,
@@ -664,7 +668,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
               SwitchListTile(
                 value: _rollover,
                 contentPadding: EdgeInsets.zero,
-                activeThumbColor: AppTheme.oceanBlue,
+                activeThumbColor: Theme.of(context).colorScheme.primary,
                 title: const Text('Enable Rollover', style: TextStyle(fontFamily: 'PublicSans')),
                 subtitle: const Text('Remaining amounts rollover to next period.', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11)),
                 onChanged: (val) => setState(() => _rollover = val),
@@ -675,7 +679,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: remainingBudget >= 0 
-                        ? AppTheme.oceanBlue.withOpacity(0.06)
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.06)
                         : AppTheme.inkRed.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -688,7 +692,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
                           fontFamily: 'PublicSans',
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: remainingBudget >= 0 ? AppTheme.carbonText : AppTheme.inkRed,
+                          color: remainingBudget >= 0 ? Theme.of(context).colorScheme.onSurface : AppTheme.inkRed,
                         ),
                       ),
                       Text(
@@ -746,7 +750,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
                         fontFamily: 'PublicSans',
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: AppTheme.carbonText.withOpacity(0.5),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -756,7 +760,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
                         fontFamily: 'PublicSans',
                         fontWeight: FontWeight.bold,
                         fontSize: 10,
-                        color: AppTheme.carbonText.withOpacity(0.4),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                         letterSpacing: 1.0,
                       ),
                     ),
@@ -813,7 +817,7 @@ class _CreateBudgetFormSheetState extends ConsumerState<_CreateBudgetFormSheet> 
               ElevatedButton(
                 onPressed: () => _saveBudget(expenseCategories),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.oceanBlue,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -101,7 +101,7 @@ class AccountsPage extends ConsumerWidget {
                       'Net Worth',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'PublicSans',
-                            color: AppTheme.carbonText.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                     ),
                     const SizedBox(height: 6),
@@ -109,7 +109,7 @@ class AccountsPage extends ConsumerWidget {
                       data: (total) => MoneyText(
                         amountMinor: total,
                         muteDecimals: true,
-                        style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w700, color: AppTheme.carbonText),
+                        style: TextStyle(fontSize: 40, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
                       ),
                       loading: () => const SizedBox(height: 48),
                       error: (err, stack) => const Text('—'),
@@ -139,10 +139,10 @@ class AccountsPage extends ConsumerWidget {
                         width: 150,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isMain ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.08),
+                            color: isMain ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
                             width: isMain ? 1.5 : 1,
                           ),
                         ),
@@ -152,17 +152,17 @@ class AccountsPage extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Icon(_getAccountIcon(account.accountType), size: 20, color: AppTheme.oceanBlue),
+                                Icon(_getAccountIcon(account.accountType), size: 20, color: Theme.of(context).colorScheme.primary),
                                 if (isMain)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.oceanBlue.withOpacity(0.12),
+                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'MAIN',
-                                      style: TextStyle(fontFamily: 'PublicSans', fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.oceanBlue),
+                                      style: TextStyle(fontFamily: 'PublicSans', fontSize: 9, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                                     ),
                                   ),
                               ],
@@ -172,14 +172,14 @@ class AccountsPage extends ConsumerWidget {
                               account.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'PublicSans', fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.carbonText),
+                              style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                             ),
                             const SizedBox(height: 2),
                             balanceAsync.when(
                               data: (balance) => MoneyText(
                                 amountMinor: balance,
                                 muteDecimals: true,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.carbonText),
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
                               ),
                               loading: () => const SizedBox(height: 18),
                               error: (err, stack) => const Text('—'),
@@ -200,13 +200,13 @@ class AccountsPage extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Recent Activity',
-                      style: TextStyle(fontFamily: 'PublicSans', fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.carbonText),
+                      style: TextStyle(fontFamily: 'PublicSans', fontSize: 15, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     TextButton(
                       onPressed: () {},
-                      child: const Text('View All', style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.oceanBlue, fontWeight: FontWeight.w600)),
+                      child: Text('View All', style: TextStyle(fontFamily: 'PublicSans', color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
@@ -234,7 +234,7 @@ class AccountsPage extends ConsumerWidget {
                                   height: 7,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: isMain ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.4),
+                                    color: isMain ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -247,24 +247,24 @@ class AccountsPage extends ConsumerWidget {
                             final isInflow = entry.direction == MoneyDirection.inflow;
                             return ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: AppTheme.carbonText.withOpacity(0.06),
+                                backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
                                 child: Icon(
                                   category.isNotEmpty ? mapCategoryIcon(category.first.icon) : Icons.receipt_long_outlined,
                                   size: 18,
-                                  color: AppTheme.carbonText.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                               title: Text(entry.note?.isNotEmpty == true ? entry.note! : 'Transaction',
                                   style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600)),
                               subtitle: Text(_formatRelative(entry.occurredAt),
-                                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: AppTheme.carbonText.withOpacity(0.5))),
+                                  style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                               trailing: MoneyText(
                                 amountMinor: entry.amountMinor,
                                 isNegative: !isInflow,
                                 showSign: isInflow,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: isInflow ? AppTheme.oceanBlue : AppTheme.carbonText,
+                                  color: isInflow ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             );
@@ -305,7 +305,7 @@ class AccountsPage extends ConsumerWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.edit_outlined, color: AppTheme.oceanBlue),
+                leading: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary),
                 title: const Text('Edit Account', style: TextStyle(fontFamily: 'PublicSans')),
                 onTap: () {
                   Navigator.pop(context);

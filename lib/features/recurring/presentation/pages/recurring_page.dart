@@ -116,7 +116,7 @@ class RecurringPage extends ConsumerWidget {
                                     fontFamily: 'PublicSans',
                                     fontWeight: FontWeight.bold,
                                     fontSize: 10,
-                                    color: AppTheme.carbonText.withOpacity(0.5),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                     letterSpacing: 1.1,
                                   ),
                                 ),
@@ -151,7 +151,7 @@ class RecurringPage extends ConsumerWidget {
                                     fontFamily: 'PublicSans',
                                     fontWeight: FontWeight.bold,
                                     fontSize: 10,
-                                    color: AppTheme.carbonText.withOpacity(0.5),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                     letterSpacing: 1.1,
                                   ),
                                 ),
@@ -188,8 +188,8 @@ class RecurringPage extends ConsumerWidget {
 
                     // Upcoming Section
                     if (upcoming.isNotEmpty) ...[
-                      _buildSectionHeader('UPCOMING', AppTheme.carbonText.withOpacity(0.5)),
-                      ...upcoming.map((inst) => _buildCommitmentTile(context, ref, inst, rules, AppTheme.carbonText.withOpacity(0.5))),
+                      _buildSectionHeader('UPCOMING', Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                      ...upcoming.map((inst) => _buildCommitmentTile(context, ref, inst, rules, Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                       const SizedBox(height: 24),
                     ],
                   ],
@@ -217,6 +217,10 @@ class RecurringPage extends ConsumerWidget {
                     final rule = rules[index];
                     return Dismissible(
                       key: Key(rule.id),
+                      dismissThresholds: const {
+                        DismissDirection.startToEnd: 0.65,
+                        DismissDirection.endToStart: 0.65,
+                      },
                       background: Container(
                         color: AppTheme.warningAmber.withOpacity(0.15),
                         alignment: Alignment.centerLeft,
@@ -280,7 +284,7 @@ class RecurringPage extends ConsumerWidget {
                         title: Text(rule.title, style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600)),
                         subtitle: Text(
                           'Every ${rule.interval} ${rule.frequency.name}(s) • Starting ${rule.startDate.toLocal().toString().substring(0, 10)}',
-                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: AppTheme.carbonText.withOpacity(0.5)),
+                          style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                         ),
                         trailing: MoneyText(
                           amountMinor: rule.amountMinor,
@@ -415,7 +419,7 @@ class RecurringPage extends ConsumerWidget {
                         fontFamily: 'PublicSans',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.carbonText.withOpacity(0.5),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                         letterSpacing: 1.1,
                       ),
                     ),

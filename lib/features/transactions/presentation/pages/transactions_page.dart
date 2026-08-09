@@ -155,7 +155,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('All Types', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterType == 'all' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterType == 'all' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterType = 'all');
                   Navigator.pop(context);
@@ -163,7 +163,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('Expense', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterType == 'expense' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterType == 'expense' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterType = 'expense');
                   Navigator.pop(context);
@@ -171,7 +171,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('Income', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterType == 'income' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterType == 'income' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterType = 'income');
                   Navigator.pop(context);
@@ -179,7 +179,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('Transfer', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterType == 'transfer' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterType == 'transfer' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterType = 'transfer');
                   Navigator.pop(context);
@@ -207,7 +207,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('All Accounts', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterAccountId == null ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterAccountId == null ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterAccountId = null);
                   Navigator.pop(context);
@@ -216,7 +216,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ...accounts.map((acc) {
                 return ListTile(
                   title: Text(acc.name, style: const TextStyle(fontFamily: 'PublicSans')),
-                  trailing: _filterAccountId == acc.id ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                  trailing: _filterAccountId == acc.id ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                   onTap: () {
                     setState(() => _filterAccountId = acc.id);
                     Navigator.pop(context);
@@ -245,7 +245,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('All Categories', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterCategoryId == null ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterCategoryId == null ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterCategoryId = null);
                   Navigator.pop(context);
@@ -253,9 +253,9 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ...categories.map((cat) {
                 return ListTile(
-                  leading: Icon(mapCategoryIcon(cat.icon), color: AppTheme.carbonText.withOpacity(0.6)),
+                  leading: Icon(mapCategoryIcon(cat.icon), color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   title: Text(cat.name, style: const TextStyle(fontFamily: 'PublicSans')),
-                  trailing: _filterCategoryId == cat.id ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                  trailing: _filterCategoryId == cat.id ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                   onTap: () {
                     setState(() => _filterCategoryId = cat.id);
                     Navigator.pop(context);
@@ -284,7 +284,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('All Time', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterDateRange == 'all' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterDateRange == 'all' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterDateRange = 'all');
                   Navigator.pop(context);
@@ -292,7 +292,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('Today', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterDateRange == 'today' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterDateRange == 'today' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterDateRange = 'today');
                   Navigator.pop(context);
@@ -300,7 +300,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('This Week', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterDateRange == 'week' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterDateRange == 'week' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterDateRange = 'week');
                   Navigator.pop(context);
@@ -308,7 +308,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('This Month', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterDateRange == 'month' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterDateRange == 'month' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() => _filterDateRange = 'month');
                   Navigator.pop(context);
@@ -316,7 +316,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
               ListTile(
                 title: const Text('Custom Range...', style: TextStyle(fontFamily: 'PublicSans')),
-                trailing: _filterDateRange == 'custom' ? const Icon(Icons.check, color: AppTheme.oceanBlue) : null,
+                trailing: _filterDateRange == 'custom' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () async {
                   Navigator.pop(context);
                   final picked = await showDateRangePicker(
@@ -350,10 +350,10 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? AppTheme.oceanBlue.withOpacity(0.08) : AppTheme.carbonText.withOpacity(0.04),
+          color: isActive ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.08),
+            color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
             width: 1,
           ),
         ),
@@ -366,14 +366,14 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                 fontFamily: 'PublicSans',
                 fontSize: 12,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                color: isActive ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.6),
+                color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
             const SizedBox(width: 4),
             Icon(
               Icons.arrow_drop_down,
               size: 16,
-              color: isActive ? AppTheme.oceanBlue : AppTheme.carbonText.withOpacity(0.4),
+              color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
             ),
           ],
         ),
@@ -398,15 +398,15 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add, size: 28),
       ),
-      backgroundColor: AppTheme.paperBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Transactions', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
         elevation: 0,
-        backgroundColor: AppTheme.paperBg,
-        foregroundColor: AppTheme.carbonText,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: AppTheme.carbonText),
+            icon: Icon(Icons.add, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () => context.go('/add'),
           ),
         ],
@@ -434,7 +434,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                     hintText: 'Search transactions...',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: AppTheme.carbonText.withOpacity(0.04),
+                    fillColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -502,13 +502,13 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                     ? Center(
                         child: Text(
                           'No matching transactions found.',
-                          style: TextStyle(fontFamily: 'PublicSans', color: AppTheme.carbonText.withOpacity(0.5)),
+                          style: TextStyle(fontFamily: 'PublicSans', color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                         ),
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                         itemCount: filtered.length,
-                        separatorBuilder: (context, index) => Divider(height: 1.0, color: AppTheme.carbonText.withOpacity(0.08)),
+                        separatorBuilder: (context, index) => Divider(height: 1.0, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
                         itemBuilder: (context, index) {
                           final entry = filtered[index];
                           final isExpense = entry.direction == MoneyDirection.outflow;
@@ -548,6 +548,10 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
 
                           return Dismissible(
                             key: Key(entry.id),
+                            dismissThresholds: const {
+                              DismissDirection.startToEnd: 0.65,
+                              DismissDirection.endToStart: 0.65,
+                            },
                             background: Container(
                               color: AppTheme.warningAmber.withOpacity(0.15),
                               alignment: Alignment.centerLeft,
@@ -646,11 +650,11 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                       children: [
                                         Text(
                                           entry.note?.isNotEmpty == true ? entry.note! : (isExpense ? 'Expense' : 'Income'),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontFamily: 'PublicSans',
                                             fontWeight: FontWeight.w600,
                                             fontSize: 14,
-                                            color: AppTheme.carbonText,
+                                            color: Theme.of(context).colorScheme.onSurface,
                                           ),
                                         ),
                                         const SizedBox(height: 3),
@@ -661,7 +665,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                               style: TextStyle(
                                                 fontFamily: 'PublicSans',
                                                 fontSize: 11,
-                                                color: AppTheme.carbonText.withOpacity(0.4),
+                                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                               ),
                                             ),
                                             Text(
@@ -669,7 +673,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                               style: TextStyle(
                                                 fontFamily: 'PublicSans',
                                                 fontSize: 11,
-                                                color: AppTheme.carbonText.withOpacity(0.4),
+                                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                               ),
                                             ),
                                           ],
@@ -688,7 +692,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                           fontFamily: 'IBMPlexMono',
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
-                                          color: isExpense ? AppTheme.carbonText : AppTheme.oceanBlue,
+                                          color: isExpense ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.primary,
                                         ),
                                       ),
                                       if (entry.categoryId != null) ...[
@@ -696,7 +700,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: AppTheme.carbonText.withOpacity(0.06),
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
@@ -705,7 +709,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                               fontFamily: 'PublicSans',
                                               fontSize: 9,
                                               fontWeight: FontWeight.bold,
-                                              color: AppTheme.carbonText.withOpacity(0.5),
+                                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                               letterSpacing: 0.5,
                                             ),
                                           ),

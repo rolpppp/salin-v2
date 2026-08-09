@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
 
 class EmptyState extends StatelessWidget {
   final String message;
@@ -28,12 +27,12 @@ class EmptyState extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: AppTheme.oceanBlue.withOpacity(0.08),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                color: AppTheme.oceanBlue,
+                color: Theme.of(context).colorScheme.primary,
                 size: 28,
               ),
             ),
@@ -42,7 +41,7 @@ class EmptyState extends StatelessWidget {
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontFamily: 'PublicSans',
-                    color: AppTheme.carbonText.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 14,
                     height: 1.4,
                   ),

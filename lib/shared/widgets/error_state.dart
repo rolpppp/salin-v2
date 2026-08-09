@@ -43,13 +43,13 @@ class ErrorState extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Something went wrong',
                 style: TextStyle(
                   fontFamily: 'PublicSans',
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.carbonText,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -58,7 +58,7 @@ class ErrorState extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'PublicSans',
                   fontSize: 13,
-                  color: AppTheme.carbonText.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
