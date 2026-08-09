@@ -42,7 +42,8 @@ void main() {
         amountMinor: 15000,
         currency: 'PHP',
         transactionType: 'expense',
-        // missing category triggers warning!
+        // Missing category no longer triggers a warning — not categorizing
+        // must not block saving (see docs/CURRENT_UX_AUDIT.md P0 #2/#3).
       );
 
       final reviewNotifier = container.read(transactionReviewProvider.notifier);
@@ -53,13 +54,14 @@ void main() {
       expect(stagedItems.length, 1);
       expect(stagedItems.first.rawInput, 'Bought Starbucks coffee 150');
       expect(stagedItems.first.transaction.description, 'Starbucks coffee');
-      expect(stagedItems.first.warnings, contains('Category is required for expenses.'));
+      expect(stagedItems.first.warnings, isEmpty);
     });
 
     test('Edit transaction and verify warning updates', () {
       final parsed = const ParsedTransaction(
         description: 'Starbucks coffee',
-        amountMinor: 15000,
+        // Missing amount triggers a warning that editing must clear —
+        // category alone no longer produces a warning to clear.
         currency: 'PHP',
         transactionType: 'expense',
       );
@@ -69,9 +71,10 @@ void main() {
 
       var staged = container.read(transactionReviewProvider).first;
       expect(staged.warnings.length, 1);
+      expect(staged.warnings, contains('Amount must be greater than zero.'));
 
-      // User edits item to add category 'Food'
-      final updated = staged.transaction.copyWith(category: 'cat_food');
+      // User edits item to add the missing amount and a category
+      final updated = staged.transaction.copyWith(amountMinor: 15000, category: 'cat_food');
       reviewNotifier.updateItem(staged.id, updated);
 
       staged = container.read(transactionReviewProvider).first;

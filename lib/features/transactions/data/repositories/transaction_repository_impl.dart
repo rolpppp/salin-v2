@@ -148,16 +148,24 @@ class TransactionRepositoryImpl implements TransactionRepository {
         case 'transport':
           dbCategory = 'cat_transport';
           break;
+        // 'dorm', 'leisure', 'academics' are legacy #tag aliases from
+        // rule_parser's earlier tag-remap step; 'rent', 'entertainment',
+        // 'utilities' are the real category suffixes rule_parser now emits
+        // directly. Both forms must resolve to the same db id.
         case 'dorm':
+        case 'rent':
           dbCategory = 'cat_rent';
           break;
         case 'leisure':
+        case 'entertainment':
           dbCategory = 'cat_entertainment';
           break;
         case 'academics':
+        case 'utilities':
           dbCategory = 'cat_utilities';
           break;
         case 'income':
+        case 'other_income':
           dbCategory = 'cat_other_income';
           break;
         case 'salary':
@@ -170,7 +178,12 @@ class TransactionRepositoryImpl implements TransactionRepository {
           dbCategory = null;
           break;
         default:
-          dbCategory = 'cat_$clean';
+          // Unrecognized category id: don't fabricate a 'cat_<clean>' id
+          // that may not exist in the categories table. Drift enforces no
+          // foreign key here, so a bad id would silently save as an
+          // orphaned, unresolvable reference instead of surfacing as
+          // uncategorized.
+          dbCategory = null;
       }
     }
 
