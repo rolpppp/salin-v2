@@ -102,27 +102,24 @@ class RuleParser implements AIProvider {
       // #category tag always wins over keyword-guessing when present
       String? categoryId;
       if (tagCategory != null) {
-        // Map common spec tags to database seeded ones
-        if (tagCategory == 'dorm') {
-          categoryId = 'cat_rent';
-        } else if (tagCategory == 'leisure') {
-          categoryId = 'cat_entertainment';
-        } else if (tagCategory == 'academics') {
-          categoryId = 'cat_utilities';
-        } else if (_realCategorySuffixes.contains(tagCategory)) {
-          categoryId = 'cat_$tagCategory';
-        } else {
-          // Unrecognized #tag: don't fabricate a category id that doesn't
-          // exist in the categories table (would produce a dangling
-          // reference invisible to every category-scoped budget).
-          categoryId = null;
-        }
+        final resolvedSuffix = _resolveTagCategory(tagCategory);
+        // Unrecognized #tag: don't fabricate a category id that doesn't
+        // exist in the categories table (would produce a dangling
+        // reference invisible to every category-scoped budget).
+        categoryId = resolvedSuffix != null ? 'cat_$resolvedSuffix' : null;
       } else {
         categoryId = _mapCategory(lowerDesc, isIncome);
       }
 
-      // Mark needs review note if it is not an exact match
-      final notes = isExact ? null : 'needs_review';
+      // Mark a note when it's not an exact-format match. Only the
+      // multi-number case is genuinely ambiguous about *which* number is
+      // the transaction amount, so only that case blocks confirmation
+      // (see AIValidator) — a single unambiguous number just parsed via a
+      // looser sentence shape still auto-saves, per
+      // docs/NEXT_ITERATION.md's Core Value Proposition revision.
+      final notes = isExact
+          ? null
+          : (matches.length > 1 ? 'ambiguous_amount' : 'needs_review');
 
       parsedList.add(ParsedTransaction(
         description: description,
@@ -166,6 +163,66 @@ class RuleParser implements AIProvider {
     'investments',
     'other_income',
   };
+
+  // Common shorthand/synonyms for a #category tag that don't share a
+  // prefix with their canonical suffix, so simple prefix matching below
+  // wouldn't catch them (e.g. "#grocery" for Food, "#academics" for the
+  // Utilities bucket per the original spec naming).
+  static const _categoryAliases = {
+    'dorm': 'rent',
+    'housing': 'rent',
+    'apartment': 'rent',
+    'condo': 'rent',
+    'lease': 'rent',
+    'leisure': 'entertainment',
+    'fun': 'entertainment',
+    'movies': 'entertainment',
+    'movie': 'entertainment',
+    'games': 'entertainment',
+    'academics': 'utilities',
+    'bills': 'utilities',
+    'elec': 'utilities',
+    'electricity': 'utilities',
+    'wifi': 'utilities',
+    'commute': 'transport',
+    'fare': 'transport',
+    'grab': 'transport',
+    'jeep': 'transport',
+    'grocery': 'food',
+    'groceries': 'food',
+    'meal': 'food',
+    'meals': 'food',
+    'pay': 'salary',
+    'wage': 'salary',
+    'income': 'other_income',
+    'misc': 'other_income',
+    'invest': 'investments',
+    'investing': 'investments',
+    'stocks': 'investments',
+    'crypto': 'investments',
+  };
+
+  /// Resolves an arbitrary #tag value (already lowercased by the caller)
+  /// into one of [_realCategorySuffixes], or null if nothing reasonable
+  /// matches. Tries, in order: an exact match, a known alias, then a
+  /// bidirectional prefix match against the real suffixes (e.g.
+  /// "#transpo" -> "transport", "#ent" -> "entertainment") — this is what
+  /// lets shorthand and truncated tags resolve without needing every
+  /// variant spelled out in [_categoryAliases]. A minimum tag length keeps
+  /// very short tags (1-2 chars) from prefix-matching too eagerly.
+  String? _resolveTagCategory(String tag) {
+    if (_realCategorySuffixes.contains(tag)) return tag;
+    final alias = _categoryAliases[tag];
+    if (alias != null) return alias;
+    if (tag.length >= 3) {
+      for (final suffix in _realCategorySuffixes) {
+        if (suffix.startsWith(tag) || tag.startsWith(suffix)) {
+          return suffix;
+        }
+      }
+    }
+    return null;
+  }
 
   bool _isIncomeKeyword(String desc) {
     // 'deposit' and 'interest' were removed: both are ambiguous in real

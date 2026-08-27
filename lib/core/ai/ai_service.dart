@@ -137,8 +137,11 @@ JSON SCHEMA:
 
     // Every line matched the exact "<amount> <description>" format — no
     // ambiguity, so return instantly without ever touching the network.
+    // (Non-null notes — 'needs_review' or 'ambiguous_amount' — still means
+    // "maybe cloud can do better on the description/category," even though
+    // 'needs_review' alone no longer blocks confirmation in the UI.)
     final ruleParserConfident = ruleResult != null &&
-        ruleResult.parsedPayload.every((tx) => tx.notes != 'needs_review');
+        ruleResult.parsedPayload.every((tx) => tx.notes == null);
 
     InferenceResult<List<ParsedTransaction>> inferenceResult;
     AIProvider activeProvider;

@@ -2,12 +2,19 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../accounts/domain/entities/account.dart';
 import '../../../accounts/presentation/providers/account_providers.dart';
 import '../../domain/entities/review_item.dart';
 import '../../../../core/ai/ai_validator.dart';
 import '../../../../core/config/ai_config.dart';
 import '../providers/transaction_providers.dart';
 import '../providers/transaction_review_provider.dart';
+
+/// The account Quick Add currently saves into. `null` means "no explicit
+/// choice yet" — the view falls back to the first active account, same as
+/// before this existed. Ephemeral UI state, not persisted: each new Quick
+/// Add session starts back at that same default.
+final quickAddSelectedAccountIdProvider = StateProvider<String?>((ref) => null);
 
 /// The "Quick Add" tab of the New Entry sheet: a single free-text input that
 /// gets parsed by the AI service, producing a queue of review cards the user
@@ -38,8 +45,9 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
 
   Future<void> _checkConnectivity() async {
     try {
-      final result = await InternetAddress.lookup('generativelanguage.googleapis.com')
-          .timeout(const Duration(milliseconds: 600));
+      final result = await InternetAddress.lookup(
+        'generativelanguage.googleapis.com',
+      ).timeout(const Duration(milliseconds: 600));
       final online = result.isNotEmpty && result.first.rawAddress.isNotEmpty;
       if (mounted) {
         setState(() {
@@ -69,25 +77,49 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
 
     if (result.isSuccess) {
       final parsedData = result.parsedData!;
-      final accounts = (ref.read(accountsListProvider).value ?? []).where((a) => !a.isArchived).toList();
-      final defaultAccountId = accounts.isNotEmpty ? accounts.first.id : null;
+      final accounts = (ref.read(accountsListProvider).value ?? [])
+          .where((a) => !a.isArchived)
+          .toList();
+      final accountOverrideId = ref.read(quickAddSelectedAccountIdProvider);
+      final overrideMatches = accounts.where((a) => a.id == accountOverrideId);
+      final selectedAccount = overrideMatches.isNotEmpty
+          ? overrideMatches.first
+          : (accounts.isNotEmpty ? accounts.first : null);
+      final defaultAccountId = selectedAccount?.id;
 
       if (parsedData.length == 1 && defaultAccountId != null) {
         final parsed = parsedData.first;
         final warnings = AIValidator.validate(parsed);
         if (warnings.isEmpty) {
-          final account = accounts.first;
+          final account = selectedAccount!;
           // Capture the repository instance itself (not a deferred `ref.read`)
           // so UNDO still works if the user navigates away and this widget
           // is disposed before the snackbar action is tapped — `ref` is tied
           // to this State's lifecycle, but the repository object is not.
           final repo = ref.read(transactionRepositoryProvider);
-          final createdEntry = await repo.createFromParsed(parsed, accountId: defaultAccountId);
+          final createdEntry = await repo.createFromParsed(
+            parsed,
+            accountId: defaultAccountId,
+          );
           _inputController.clear();
           if (!mounted) return;
+          // Category/merchant are auto-assigned without a pre-save
+          // confirmation tap (docs/NEXT_ITERATION.md's Core Value
+          // Proposition revision) — naming the auto-assigned category here
+          // is what keeps that "visible" rather than silent; it's still
+          // editable afterwards via the transaction's own edit screen.
+          final categories = ref.read(categoriesListProvider).value ?? [];
+          final matchingCategories = categories.where(
+            (c) => c.id == parsed.category,
+          );
+          final categoryLabel = matchingCategories.isNotEmpty
+              ? matchingCategories.first.name
+              : 'Uncategorized';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Saved ₱${(parsed.amountMinor! / 100).toStringAsFixed(2)} · ${parsed.description} → ${account.name}'),
+              content: Text(
+                'Saved ₱${(parsed.amountMinor! / 100).toStringAsFixed(2)} · ${parsed.description} ($categoryLabel) → ${account.name}',
+              ),
               action: SnackBarAction(
                 label: 'UNDO',
                 onPressed: () async {
@@ -104,12 +136,18 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
       }
 
       for (final parsed in parsedData) {
-        ref.read(transactionReviewProvider.notifier).stageTransaction(text, parsed);
+        ref
+            .read(transactionReviewProvider.notifier)
+            .stageTransaction(text, parsed);
       }
       _inputController.clear();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.errorMessage ?? 'Could not parse that — try rewording it.')),
+        SnackBar(
+          content: Text(
+            result.errorMessage ?? 'Could not parse that — try rewording it.',
+          ),
+        ),
       );
     }
   }
@@ -118,22 +156,51 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
   Widget build(BuildContext context) {
     final reviewItems = ref.watch(transactionReviewProvider);
     final accountsAsync = ref.watch(accountsListProvider);
-    final activeAccounts = (accountsAsync.value ?? []).where((a) => !a.isArchived).toList();
+    final activeAccounts = (accountsAsync.value ?? [])
+        .where((a) => !a.isArchived)
+        .toList();
+    // Keep categoriesListProvider warm from the moment this view mounts —
+    // _handleParse reads it synchronously (via ref.read) to label the
+    // auto-assigned category in the save confirmation, and a StreamProvider
+    // that's never been watched has no value yet on its first read.
+    ref.watch(categoriesListProvider);
     // Free-form parsing (e.g. "Spent ₱150 on coffee at Ozone") only actually
     // works when Cloud AI is on and reachable; Cloud AI defaults to off, so
     // the input hint should show the structured format that always works
     // offline unless the user has actually opted into cloud fallback.
     final cloudAiEnabled = ref.watch(cloudAiEnabledProvider);
     final showStructuredHint = _isOfflineMode || !cloudAiEnabled;
-    final defaultAccountId = activeAccounts.isNotEmpty ? activeAccounts.first.id : null;
-    final defaultAccountName = activeAccounts.isNotEmpty ? activeAccounts.first.name : null;
-    final hasBlockingItem = reviewItems.any((item) => item.warnings.isNotEmpty);
+    final accountOverrideId = ref.watch(quickAddSelectedAccountIdProvider);
+    final overrideMatches = activeAccounts.where(
+      (a) => a.id == accountOverrideId,
+    );
+    final selectedAccount = overrideMatches.isNotEmpty
+        ? overrideMatches.first
+        : (activeAccounts.isNotEmpty ? activeAccounts.first : null);
+    final defaultAccountId = selectedAccount?.id;
+    final defaultAccountName = selectedAccount?.name;
+    final readyCount = reviewItems
+        .where((item) => item.warnings.isEmpty)
+        .length;
+    final hasFlaggedItem = reviewItems.any((item) => item.warnings.isNotEmpty);
+    final accountBalanceAsync = defaultAccountId != null
+        ? ref.watch(accountBalanceProvider(defaultAccountId))
+        : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (accountBalanceAsync != null && defaultAccountName != null) ...[
+            _WhatsLeftBanner(
+              accounts: activeAccounts,
+              selectedAccountId: defaultAccountId!,
+              accountName: defaultAccountName,
+              balanceAsync: accountBalanceAsync,
+            ),
+            const SizedBox(height: 16),
+          ],
           if (_isOfflineMode) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -141,12 +208,18 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
               decoration: BoxDecoration(
                 color: AppTheme.warningAmber.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.warningAmber.withOpacity(0.3)),
+                border: Border.all(
+                  color: AppTheme.warningAmber.withOpacity(0.3),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.wifi_off_outlined, color: AppTheme.warningAmber, size: 20),
+                  const Icon(
+                    Icons.wifi_off_outlined,
+                    color: AppTheme.warningAmber,
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -169,7 +242,9 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
                           style: TextStyle(
                             fontFamily: 'PublicSans',
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
                             height: 1.4,
                           ),
                         ),
@@ -184,7 +259,11 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.08),
+              ),
             ),
             child: Column(
               children: [
@@ -195,7 +274,10 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
                     autofocus: true,
                     maxLines: 4,
                     minLines: 3,
-                    style: const TextStyle(fontFamily: 'PublicSans', fontSize: 14),
+                    style: const TextStyle(
+                      fontFamily: 'PublicSans',
+                      fontSize: 14,
+                    ),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       // The structured-format example intentionally matches
@@ -205,16 +287,31 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
                       hintText: showStructuredHint
                           ? "Enter transactions, one per line...\ne.g. 'Lunch 180'"
                           : "Paste a receipt, bank SMS, or describe your transaction...\ne.g., 'Spent ₱150 on coffee at Ozone yesterday'",
-                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35)),
+                      hintStyle: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.35),
+                      ),
                     ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                    border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06))),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.06),
+                      ),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -222,14 +319,31 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
                       ElevatedButton.icon(
                         onPressed: _isParsing ? null : _handleParse,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         icon: _isParsing
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
                             : const Icon(Icons.auto_awesome, size: 16),
-                        label: const Text('Parse', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600)),
+                        label: const Text(
+                          'Parse',
+                          style: TextStyle(
+                            fontFamily: 'PublicSans',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -243,33 +357,85 @@ class _QuickAddViewState extends ConsumerState<QuickAddView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Parsed Transactions', style: TextStyle(fontFamily: 'PublicSans', fontSize: 15, fontWeight: FontWeight.w600)),
-                Text('${reviewItems.length} ITEMS FOUND', style: TextStyle(fontFamily: 'PublicSans', fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), letterSpacing: 0.5)),
+                const Text(
+                  'Parsed Transactions',
+                  style: TextStyle(
+                    fontFamily: 'PublicSans',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${reviewItems.length} ITEMS FOUND',
+                  style: TextStyle(
+                    fontFamily: 'PublicSans',
+                    fontSize: 11,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
-            ...reviewItems.map((item) => _ReviewCard(item: item, defaultAccountId: defaultAccountId, defaultAccountName: defaultAccountName)),
+            ...reviewItems.map(
+              (item) => _ReviewCard(
+                item: item,
+                defaultAccountId: defaultAccountId,
+                defaultAccountName: defaultAccountName,
+              ),
+            ),
 
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: (defaultAccountId == null || hasBlockingItem)
+                // Confirm All acts only on items with no blocking warnings —
+                // a flagged (ambiguous-amount) line no longer holds the rest
+                // of the batch hostage. See docs/UX_REVIEW.md Recommendation
+                // 2 / docs/FRICTION_REPORT.md B2: pasting a Notes-style
+                // multi-line list should get easier as it scales, not worse.
+                onPressed: (defaultAccountId == null || readyCount == 0)
                     ? null
-                    : () => ref.read(transactionReviewProvider.notifier).confirmAll(accountId: defaultAccountId),
+                    : () => ref
+                          .read(transactionReviewProvider.notifier)
+                          .confirmAll(accountId: defaultAccountId),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: hasBlockingItem ? Theme.of(context).colorScheme.onSurface.withOpacity(0.08) : Theme.of(context).colorScheme.primary,
-                  foregroundColor: hasBlockingItem ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) : Colors.white,
-                  disabledBackgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
-                  disabledForegroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  backgroundColor: readyCount == 0
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.08)
+                      : Theme.of(context).colorScheme.primary,
+                  foregroundColor: readyCount == 0
+                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                      : Colors.white,
+                  disabledBackgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.08),
+                  disabledForegroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.4),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                icon: Icon(hasBlockingItem ? Icons.lock_outline : Icons.check, size: 16),
+                icon: Icon(
+                  readyCount == 0 ? Icons.lock_outline : Icons.check,
+                  size: 16,
+                ),
                 label: Text(
-                  hasBlockingItem ? 'Confirm All (Review Needed)' : 'Confirm All',
-                  style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600),
+                  readyCount == 0
+                      ? 'Confirm All (Review Needed)'
+                      : (hasFlaggedItem
+                            ? 'Confirm $readyCount Ready'
+                            : 'Confirm All'),
+                  style: const TextStyle(
+                    fontFamily: 'PublicSans',
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -285,15 +451,23 @@ class _ReviewCard extends ConsumerWidget {
   final String? defaultAccountId;
   final String? defaultAccountName;
 
-  const _ReviewCard({required this.item, required this.defaultAccountId, this.defaultAccountName});
+  const _ReviewCard({
+    required this.item,
+    required this.defaultAccountId,
+    this.defaultAccountName,
+  });
 
   void _showEditSheet(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.read(categoriesListProvider);
     final categories = categoriesAsync.value ?? [];
 
-    final descController = TextEditingController(text: item.transaction.description);
+    final descController = TextEditingController(
+      text: item.transaction.description,
+    );
     final amountController = TextEditingController(
-      text: item.transaction.amountMinor != null ? (item.transaction.amountMinor! / 100).toStringAsFixed(2) : '',
+      text: item.transaction.amountMinor != null
+          ? (item.transaction.amountMinor! / 100).toStringAsFixed(2)
+          : '',
     );
     String? selectedCategoryId = item.transaction.category;
 
@@ -336,22 +510,34 @@ class _ReviewCard extends ConsumerWidget {
                   TextFormField(
                     controller: amountController,
                     decoration: const InputDecoration(labelText: 'Amount (₱)'),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     style: const TextStyle(fontFamily: 'IBMPlexMono'),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: categories.any((c) => c.id == selectedCategoryId) ? selectedCategoryId : null,
+                    value: categories.any((c) => c.id == selectedCategoryId)
+                        ? selectedCategoryId
+                        : null,
                     decoration: const InputDecoration(labelText: 'Category'),
                     items: [
                       const DropdownMenuItem<String>(
                         value: null,
-                        child: Text('Uncategorized', style: TextStyle(fontFamily: 'PublicSans')),
+                        child: Text(
+                          'Uncategorized',
+                          style: TextStyle(fontFamily: 'PublicSans'),
+                        ),
                       ),
-                      ...categories.map((c) => DropdownMenuItem<String>(
-                        value: c.id,
-                        child: Text(c.name, style: const TextStyle(fontFamily: 'PublicSans')),
-                      )),
+                      ...categories.map(
+                        (c) => DropdownMenuItem<String>(
+                          value: c.id,
+                          child: Text(
+                            c.name,
+                            style: const TextStyle(fontFamily: 'PublicSans'),
+                          ),
+                        ),
+                      ),
                     ],
                     onChanged: (val) {
                       setModalState(() {
@@ -363,8 +549,11 @@ class _ReviewCard extends ConsumerWidget {
                   ElevatedButton(
                     onPressed: () {
                       final desc = descController.text.trim();
-                      final amtVal = double.tryParse(amountController.text.trim()) ?? 0.0;
-                      final amtMinor = amtVal > 0 ? (amtVal * 100).round() : null;
+                      final amtVal =
+                          double.tryParse(amountController.text.trim()) ?? 0.0;
+                      final amtMinor = amtVal > 0
+                          ? (amtVal * 100).round()
+                          : null;
 
                       final updatedTx = item.transaction.copyWith(
                         description: desc,
@@ -373,16 +562,26 @@ class _ReviewCard extends ConsumerWidget {
                         notes: null, // User edited it, clear format warnings!
                       );
 
-                      ref.read(transactionReviewProvider.notifier).updateItem(item.id, updatedTx);
+                      ref
+                          .read(transactionReviewProvider.notifier)
+                          .updateItem(item.id, updatedTx);
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    child: const Text('Save Changes', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        fontFamily: 'PublicSans',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -396,7 +595,9 @@ class _ReviewCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final needsReview = item.warnings.isNotEmpty;
-    final borderColor = needsReview ? AppTheme.warningAmber : AppTheme.registerGreen;
+    final borderColor = needsReview
+        ? AppTheme.warningAmber
+        : AppTheme.registerGreen;
     final txn = item.transaction;
     final isIncome = txn.transactionType.toLowerCase() == 'income';
 
@@ -415,11 +616,26 @@ class _ReviewCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(txn.merchant ?? txn.description, style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600, fontSize: 15)),
+                child: Text(
+                  txn.merchant ?? txn.description,
+                  style: const TextStyle(
+                    fontFamily: 'PublicSans',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
               ),
               Text(
-                txn.amountMinor != null ? '₱${(txn.amountMinor! / 100).toStringAsFixed(2)}' : '—',
-                style: TextStyle(fontFamily: 'IBMPlexMono', fontWeight: FontWeight.w600, color: isIncome ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface),
+                txn.amountMinor != null
+                    ? '₱${(txn.amountMinor! / 100).toStringAsFixed(2)}'
+                    : '—',
+                style: TextStyle(
+                  fontFamily: 'IBMPlexMono',
+                  fontWeight: FontWeight.w600,
+                  color: isIncome
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ],
           ),
@@ -431,12 +647,22 @@ class _ReviewCard extends ConsumerWidget {
               _Chip(
                 label: needsReview ? 'NEEDS REVIEW' : 'CONFIDENT',
                 color: borderColor,
-                icon: needsReview ? Icons.help_outline : Icons.check_circle_outline,
+                icon: needsReview
+                    ? Icons.help_outline
+                    : Icons.check_circle_outline,
               ),
               const Spacer(),
               Text(
-                txn.transactionDate != null ? _relativeLabel(txn.transactionDate!) : '',
-                style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                txn.transactionDate != null
+                    ? _relativeLabel(txn.transactionDate!)
+                    : '',
+                style: TextStyle(
+                  fontFamily: 'PublicSans',
+                  fontSize: 12,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.5),
+                ),
               ),
             ],
           ),
@@ -444,7 +670,11 @@ class _ReviewCard extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               '→ $defaultAccountName',
-              style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+              style: TextStyle(
+                fontFamily: 'PublicSans',
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
             ),
           ],
           const SizedBox(height: 10),
@@ -455,10 +685,17 @@ class _ReviewCard extends ConsumerWidget {
                   onPressed: () => _showEditSheet(context, ref),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.warningAmber,
-                    side: BorderSide(color: AppTheme.warningAmber.withOpacity(0.4)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    side: BorderSide(
+                      color: AppTheme.warningAmber.withOpacity(0.4),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: const Text('Edit Details', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13)),
+                  child: const Text(
+                    'Edit Details',
+                    style: TextStyle(fontFamily: 'PublicSans', fontSize: 13),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -466,14 +703,30 @@ class _ReviewCard extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: defaultAccountId == null || needsReview
                       ? null
-                      : () => ref.read(transactionReviewProvider.notifier).confirmItem(item.id, accountId: defaultAccountId!),
+                      : () => ref
+                            .read(transactionReviewProvider.notifier)
+                            .confirmItem(item.id, accountId: defaultAccountId!),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.surface,
                     foregroundColor: Theme.of(context).colorScheme.primary,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.3))),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.3),
+                      ),
+                    ),
                   ),
-                  child: const Text('Looks Good', style: TextStyle(fontFamily: 'PublicSans', fontSize: 13, fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Looks Good',
+                    style: TextStyle(
+                      fontFamily: 'PublicSans',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -486,10 +739,174 @@ class _ReviewCard extends ConsumerWidget {
   String _relativeLabel(DateTime dt) {
     final now = DateTime.now();
     final local = dt.toLocal();
-    if (local.year == now.year && local.month == now.month && local.day == now.day) return 'Today';
+    if (local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day)
+      return 'Today';
     final yesterday = now.subtract(const Duration(days: 1));
-    if (local.year == yesterday.year && local.month == yesterday.month && local.day == yesterday.day) return 'Yesterday';
+    if (local.year == yesterday.year &&
+        local.month == yesterday.month &&
+        local.day == yesterday.day)
+      return 'Yesterday';
     return '${local.month}/${local.day}';
+  }
+}
+
+/// Live "what's left" feedback for the account Quick Add will save into,
+/// and — when more than one account exists — the picker for choosing that
+/// account. Watches [accountBalanceProvider] directly rather than reading a
+/// value captured at parse-time, so it reflects the post-save balance the
+/// instant any of Quick Add's three save paths (auto-save, confirm one,
+/// confirm all) commit — no navigation to Home required.
+class _WhatsLeftBanner extends ConsumerWidget {
+  final List<Account> accounts;
+  final String selectedAccountId;
+  final String accountName;
+  final AsyncValue<int> balanceAsync;
+
+  const _WhatsLeftBanner({
+    required this.accounts,
+    required this.selectedAccountId,
+    required this.accountName,
+    required this.balanceAsync,
+  });
+
+  void _showAccountPicker(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Text(
+                  'Save to',
+                  style: TextStyle(
+                    fontFamily: 'PublicSans',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              ...accounts.map((account) {
+                final isSelected = account.id == selectedAccountId;
+                return ListTile(
+                  leading: Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                  ),
+                  title: Text(
+                    account.name,
+                    style: const TextStyle(fontFamily: 'PublicSans'),
+                  ),
+                  trailing: isSelected
+                      ? Icon(
+                          Icons.check,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                      : null,
+                  onTap: () {
+                    ref.read(quickAddSelectedAccountIdProvider.notifier).state =
+                        account.id;
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canSwitchAccounts = accounts.length > 1;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: canSwitchAccounts ? () => _showAccountPicker(context, ref) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.account_balance_wallet_outlined,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      accountName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'PublicSans',
+                        fontSize: 13,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                  if (canSwitchAccounts) ...[
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.expand_more,
+                      size: 16,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            balanceAsync.when(
+              data: (balanceMinor) {
+                final isOverdrawn = balanceMinor < 0;
+                final label = isOverdrawn
+                    ? '₱${(balanceMinor.abs() / 100).toStringAsFixed(2)} overdrawn'
+                    : '₱${(balanceMinor / 100).toStringAsFixed(2)} left';
+                return Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexMono',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isOverdrawn
+                        ? AppTheme.warningAmber
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                );
+              },
+              loading: () => const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              error: (_, __) => const SizedBox(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -502,13 +919,18 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = color ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
+    final tone =
+        color ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: (color ?? Theme.of(context).colorScheme.onSurface).withOpacity(0.1),
+        color: (color ?? Theme.of(context).colorScheme.onSurface).withOpacity(
+          0.1,
+        ),
         borderRadius: BorderRadius.circular(6),
-        border: color != null ? Border.all(color: color!.withOpacity(0.4)) : null,
+        border: color != null
+            ? Border.all(color: color!.withOpacity(0.4))
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -517,7 +939,16 @@ class _Chip extends StatelessWidget {
             Icon(icon, size: 12, color: tone),
             const SizedBox(width: 4),
           ],
-          Text(label, style: TextStyle(fontFamily: 'PublicSans', fontSize: 10, fontWeight: FontWeight.bold, color: tone, letterSpacing: 0.3)),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'PublicSans',
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: tone,
+              letterSpacing: 0.3,
+            ),
+          ),
         ],
       ),
     );
