@@ -17,8 +17,15 @@ class AIValidator {
       warnings.add('Unsupported transaction type: $type.');
     }
 
-    if (transaction.notes != null && transaction.notes!.contains('needs_review')) {
-      warnings.add('Format did not match exactly: best-effort parse applied.');
+    // Only genuine amount ambiguity (more than one number found on the
+    // line, so it's unclear which one is the transaction amount) blocks
+    // confirmation. A merely non-exact-format parse with a single,
+    // unambiguous number ('needs_review') does not warn here — amount and
+    // direction are already solid, so it's auto-save eligible; category is
+    // auto-assigned and visible-but-editable rather than gated. See
+    // docs/NEXT_ITERATION.md's Core Value Proposition revision.
+    if (transaction.notes == 'ambiguous_amount') {
+      warnings.add('More than one number found — please confirm the correct amount.');
     }
 
     return warnings;
