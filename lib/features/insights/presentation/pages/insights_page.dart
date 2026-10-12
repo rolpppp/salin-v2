@@ -23,7 +23,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final entriesAsync = ref.watch(ledgerEntriesListProvider);
+    final entriesAsync = ref.watch(reportableLedgerEntriesProvider);
     final categoriesAsync = ref.watch(categoriesListProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;

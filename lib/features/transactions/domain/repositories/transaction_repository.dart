@@ -15,6 +15,14 @@ abstract class TransactionRepository {
   Stream<List<LedgerEntry>> watchLedgerEntriesByCategory(String categoryId);
   Future<List<LedgerEntry>> getAllLedgerEntries();
   
+  /// "Set real balances": for each account in [realBalancesMinor]
+  /// (accountId -> what the user really holds, integer centavos) whose real
+  /// balance differs from the balance Salin computes, writes ONE
+  /// `LedgerOrigin.adjustment` entry for the difference. All in a single DB
+  /// transaction; unchanged accounts write nothing. Returns the entries
+  /// written. Nothing existing is edited or deleted.
+  Future<List<LedgerEntry>> applyBalanceAdjustments(Map<String, int> realBalancesMinor);
+
   // AI Conversion
   Future<LedgerEntry> createFromParsed(
     ParsedTransaction parsed, {

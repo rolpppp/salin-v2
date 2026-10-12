@@ -112,6 +112,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
 
       // 4. Type Filter
       if (_filterType != 'all') {
+        if ((_filterType == 'expense' || _filterType == 'income') && entry.isBalanceAdjustment) return false;
         if (_filterType == 'expense' && entry.direction != MoneyDirection.outflow) return false;
         if (_filterType == 'income' && entry.direction != MoneyDirection.inflow) return false;
         if (_filterType == 'transfer' && entry.transferId == null) return false;
@@ -649,7 +650,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          entry.note?.isNotEmpty == true ? entry.note! : (isExpense ? 'Expense' : 'Income'),
+                                          entry.isBalanceAdjustment ? 'Balance adjustment' : (entry.note?.isNotEmpty == true ? entry.note! : (isExpense ? 'Expense' : 'Income')),
                                           style: TextStyle(
                                             fontFamily: 'PublicSans',
                                             fontWeight: FontWeight.w600,

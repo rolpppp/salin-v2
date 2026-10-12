@@ -49,3 +49,29 @@ final totalBalanceProvider = Provider<AsyncValue<int>>((ref) {
   );
 });
 
+
+/// Computed balance (opening + every live ledger entry, adjustments included)
+/// for each account, keyed by account id. Same derivation as
+/// [AccountRepository.watchBalance], for screens that need all of them at once.
+final accountBalancesProvider = Provider<AsyncValue<Map<String, int>>>((ref) {
+  final accountsAsync = ref.watch(accountsListProvider);
+  final entriesAsync = ref.watch(ledgerEntriesListProvider);
+
+  return accountsAsync.when(
+    data: (accounts) => entriesAsync.when(
+      data: (entries) {
+        final balances = {for (final a in accounts) a.id: a.openingBalanceMinor};
+        for (final e in entries) {
+          if (!balances.containsKey(e.accountId)) continue;
+          balances[e.accountId] = balances[e.accountId]! +
+              (e.direction == MoneyDirection.inflow ? e.amountMinor : -e.amountMinor);
+        }
+        return AsyncValue.data(balances);
+      },
+      error: (err, stack) => AsyncValue.error(err, stack),
+      loading: () => const AsyncValue.loading(),
+    ),
+    error: (err, stack) => AsyncValue.error(err, stack),
+    loading: () => const AsyncValue.loading(),
+  );
+});
