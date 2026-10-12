@@ -28,3 +28,13 @@ abstract class LedgerEntry with _$LedgerEntry {
 
   factory LedgerEntry.fromJson(Map<String, dynamic> json) => _$LedgerEntryFromJson(json);
 }
+
+extension LedgerEntryReporting on LedgerEntry {
+  /// A "Set real balances" correction. It moves an account's balance but is
+  /// neither income nor spending, so stats and budgets must skip it.
+  bool get isBalanceAdjustment => origin == LedgerOrigin.adjustment;
+}
+
+/// Entries that count as income/spending in stats and budgets.
+List<LedgerEntry> reportableEntries(Iterable<LedgerEntry> entries) =>
+    entries.where((e) => !e.isBalanceAdjustment).toList();

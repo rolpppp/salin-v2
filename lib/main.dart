@@ -8,6 +8,7 @@ import 'core/config/supabase_config.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/sync/sync_providers.dart';
 import 'core/theme/app_theme.dart';
+import 'features/accounts/presentation/widgets/welcome_back_gate.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 
 void main() async {
@@ -68,6 +69,10 @@ class SalinApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme(accent),
       themeMode: themeMode,
       routerConfig: router,
+      builder: (context, child) => WelcomeBackGate(
+        navigatorKey: rootNavigatorKey,
+        child: child ?? const SizedBox.shrink(),
+      ),
       debugShowCheckedModeBanner: false,
     );
   }

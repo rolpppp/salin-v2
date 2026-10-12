@@ -378,9 +378,11 @@ class HomePage extends ConsumerWidget {
                           ),
                         ),
                         title: Text(
-                          entry.note != null && entry.note!.isNotEmpty
-                              ? entry.note!
-                              : (isExpense ? 'Expense' : 'Income'),
+                          entry.isBalanceAdjustment
+                              ? 'Balance adjustment'
+                              : (entry.note != null && entry.note!.isNotEmpty
+                                  ? entry.note!
+                                  : (isExpense ? 'Expense' : 'Income')),
                           style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: 'PublicSans'),
                         ),
                         subtitle: Text(

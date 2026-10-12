@@ -8,9 +8,11 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_state.dart';
 import '../../../../shared/widgets/money_text.dart';
 import '../../../transactions/domain/entities/category.dart';
+import '../../../transactions/domain/entities/ledger_entry.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 import '../../domain/entities/account.dart';
 import '../providers/account_providers.dart';
+import '../widgets/update_balances_sheet.dart';
 
 class AccountsPage extends ConsumerWidget {
   const AccountsPage({super.key});
@@ -117,7 +119,20 @@ class AccountsPage extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('update_balances_button'),
+                    onPressed: () => showUpdateBalancesSheet(context),
+                    icon: const Icon(Icons.fact_check_outlined),
+                    label: const Text('Update balances', style: TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600)),
+                    style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
 
               // Horizontal compact account cards — a row of parallel peer
               // items, per the design system's density rule, not a vertical
@@ -254,7 +269,7 @@ class AccountsPage extends ConsumerWidget {
                                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
-                              title: Text(entry.note?.isNotEmpty == true ? entry.note! : 'Transaction',
+                              title: Text(entry.isBalanceAdjustment ? 'Balance adjustment' : (entry.note?.isNotEmpty == true ? entry.note! : 'Transaction'),
                                   style: const TextStyle(fontFamily: 'PublicSans', fontWeight: FontWeight.w600)),
                               subtitle: Text(_formatRelative(entry.occurredAt),
                                   style: TextStyle(fontFamily: 'PublicSans', fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),

@@ -8,6 +8,7 @@ import '../../domain/entities/category.dart';
 import '../../domain/entities/transfer.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../../../../core/ai/parsed_transaction.dart';
+import '../../../accounts/domain/balance_adjustment.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
   final AppDatabase _db;
@@ -129,6 +130,58 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<void> createLedgerEntry(LedgerEntry entry) async {
     await _db.into(_db.ledgerEntries).insert(_mapLedgerEntryDomainToCompanion(entry));
+  }
+
+  @override
+  Future<List<LedgerEntry>> applyBalanceAdjustments(Map<String, int> realBalancesMinor) async {
+    final written = <LedgerEntry>[];
+    await _db.transaction(() async {
+      for (final item in realBalancesMinor.entries) {
+        final accountId = item.key;
+        final account = await (_db.select(_db.accounts)
+              ..where((t) => t.id.equals(accountId) & t.deletedAt.isNull()))
+            .getSingleOrNull();
+        if (account == null) continue;
+
+        // Same derivation as AccountRepository.watchBalance: opening balance
+        // plus every live ledger entry (adjustments included).
+        final rows = await (_db.select(_db.ledgerEntries)
+              ..where((t) => t.accountId.equals(accountId) & t.deletedAt.isNull()))
+            .get();
+        var computed = account.openingBalanceMinor;
+        for (final r in rows) {
+          computed += r.direction == MoneyDirection.inflow.index
+              ? r.amountMinor
+              : -r.amountMinor;
+        }
+
+        final plan = planBalanceAdjustment(
+          accountId: accountId,
+          computedMinor: computed,
+          realMinor: item.value,
+        );
+        if (plan == null) continue;
+
+        final now = DateTime.now().toUtc();
+        final entry = LedgerEntry(
+          id: const Uuid().v4(),
+          accountId: accountId,
+          categoryId: null,
+          transferId: null,
+          amountMinor: plan.amountMinor,
+          direction: plan.direction,
+          origin: LedgerOrigin.adjustment,
+          occurredAt: now,
+          note: kBalanceAdjustmentNote,
+          createdAt: now,
+          updatedAt: now,
+          syncStatus: SyncStatus.localOnly,
+        );
+        await _db.into(_db.ledgerEntries).insert(_mapLedgerEntryDomainToCompanion(entry));
+        written.add(entry);
+      }
+    });
+    return written;
   }
 
   @override
