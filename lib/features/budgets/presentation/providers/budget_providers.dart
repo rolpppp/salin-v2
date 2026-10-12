@@ -90,7 +90,7 @@ final budgetSummaryProvider = Provider.family<AsyncValue<BudgetSummary>, String>
   final budgetAsync = ref.watch(budgetDetailsProvider(budgetId));
   final limitsAsync = ref.watch(budgetCategoryLimitsProvider(budgetId));
   final categoriesAsync = ref.watch(categoriesListProvider);
-  final entriesAsync = ref.watch(ledgerEntriesListProvider);
+  final entriesAsync = ref.watch(reportableLedgerEntriesProvider);
 
   return budgetAsync.when(
     data: (budget) {

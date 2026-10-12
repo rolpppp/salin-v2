@@ -21,6 +21,13 @@ final ledgerEntriesListProvider = StreamProvider<List<LedgerEntry>>((ref) {
   return repository.watchAllLedgerEntries();
 });
 
+/// Ledger entries that count as income/spending: everything except balance
+/// adjustments. Stats and budgets read this; balances read the unfiltered
+/// [ledgerEntriesListProvider] so adjustments still move them.
+final reportableLedgerEntriesProvider = Provider<AsyncValue<List<LedgerEntry>>>((ref) {
+  return ref.watch(ledgerEntriesListProvider).whenData(reportableEntries);
+});
+
 final ledgerEntriesByAccountProvider = StreamProvider.family<List<LedgerEntry>, String>((ref, accountId) {
   final repository = ref.watch(transactionRepositoryProvider);
   return repository.watchLedgerEntriesByAccount(accountId);
